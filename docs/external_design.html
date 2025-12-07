@@ -129,6 +129,26 @@
             font-weight: bold;
             color: #d32f2f;
         }
+        .ui-screenshot {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            margin: 10px 0;
+        }
+        .image-placeholder {
+            background-color: #e0e0e0;
+            border: 2px dashed #999;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -189,17 +209,27 @@
 
 <div class="ui-container">
     <div class="ui-image">
-        <h4>【参考UI画像1】</h4>
-        <p style="border: 2px solid #ccc; padding: 10px; background-color: white; min-height: 300px;">
-            <strong>UI要素：</strong><br>
-            - カレンダー表示（年月日）<br>
-            - 当日の作業時間表示（0.0h）<br>
-            - プロジェクト名入力フィールド<br>
-            - タグ入力フィールド（会議、メールなど）<br>
-            - メモ入力エリア<br>
-            - STARTボタン（タイマー開始）<br>
-            - 編集・削除ボタン<br>
-        </p>
+        <h4>【参考UI画像1：タスク登録・実行画面】</h4>
+        <!-- 実際のUI画像をここに配置 -->
+        <img src="images/ui_task_entry.png" alt="タスク登録画面UI" class="ui-screenshot"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="image-placeholder" style="display:none;">
+            <div>
+                <p><strong>📱 UI画像プレースホルダー</strong></p>
+                <p>images/ui_task_entry.png をここに配置してください</p>
+                <hr style="margin: 15px 0; border-color: #999;">
+                <p style="font-size: 0.9em; text-align: left; margin-top: 10px;">
+                    <strong>画面要素：</strong><br>
+                    ✓ カレンダー表示（2020年4月5日）<br>
+                    ✓ 当日の作業時間表示（0.0h）<br>
+                    ✓ プロジェクト名入力フィールド<br>
+                    ✓ タグ入力（会議、メールなど）<br>
+                    ✓ メモ入力エリア<br>
+                    ✓ STARTボタン（タイマー開始）<br>
+                    ✓ 編集・削除ボタン
+                </p>
+            </div>
+        </div>
     </div>
 
     <div class="ui-description">
@@ -253,16 +283,26 @@
 
 <div class="ui-container">
     <div class="ui-image">
-        <h4>【参考UI画像2】</h4>
-        <p style="border: 2px solid #ccc; padding: 10px; background-color: white; min-height: 300px;">
-            <strong>UI要素：</strong><br>
-            - 年月選択（例：2020年1月）<br>
-            - 総日数・総時間表示（31 DAYS / 132.0 HOURS）<br>
-            - プロジェクト別一覧表示<br>
-            - 各項目の作業時間と割合（時間、%）<br>
-            - 横棒グラフによる可視化<br>
-            - タブ切り替え（カレンダー、プロジェクト、タグ、設定）<br>
-        </p>
+        <h4>【参考UI画像2：月次集計・レポート画面】</h4>
+        <!-- 実際のUI画像をここに配置 -->
+        <img src="images/ui_monthly_report.png" alt="月次レポート画面UI" class="ui-screenshot"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="image-placeholder" style="display:none;">
+            <div>
+                <p><strong>📊 UI画像プレースホルダー</strong></p>
+                <p>images/ui_monthly_report.png をここに配置してください</p>
+                <hr style="margin: 15px 0; border-color: #999;">
+                <p style="font-size: 0.9em; text-align: left; margin-top: 10px;">
+                    <strong>画面要素：</strong><br>
+                    ✓ 年月選択（例：2020年1月）<br>
+                    ✓ 総日数・総時間表示（31 DAYS / 132.0 HOURS）<br>
+                    ✓ プロジェクト別一覧表示<br>
+                    ✓ 各項目の作業時間と割合（時間、%）<br>
+                    ✓ 横棒グラフによる可視化<br>
+                    ✓ タブ切り替え（カレンダー、プロジェクト、タグ、設定）
+                </p>
+            </div>
+        </div>
     </div>
 
     <div class="ui-description">
