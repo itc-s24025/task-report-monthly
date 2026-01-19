@@ -12,7 +12,7 @@
             <strong>🐘 Database:</strong> {{ db_info.type }} - {{ db_info.database }}@{{ db_info.host }} (User: {{ db_info.user }})
         </div>
         {% endif %}
-        <form method="POST" action="/add">
+        <form method="POST" action="/api/task/add">
             <input type="text" name="title" id="title" placeholder="Add Todo" required>
             <button type="submit">Add</button>
         </form>
@@ -20,7 +20,7 @@
             {% for todo in todo_list %}
             <li>
                 {{ todo.title }}
-                <form method="POST" action="/delete/{{ todo.id }}">
+                <form method="POST" action="/api/task/delete/{{ todo.id }}">
                     <button type="submit">Delete</button>
                 </form>
             </li>
