@@ -1,31 +1,261 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Todo App</title>
-    <link rel="stylesheet" href="../static/style.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Todo App</h1>
-        {% if db_info %}
-        <div class="db-info">
-            <strong>🐘 Database:</strong> {{ db_info.type }} - {{ db_info.database }}@{{ db_info.host }} (User: {{ db_info.user }})
-        </div>
-        {% endif %}
-        <form method="POST" action="/add">
-            <input type="text" name="title" id="title" placeholder="Add Todo" required>
-            <button type="submit">Add</button>
-        </form>
-        <ul>
-            {% for todo in todo_list %}
-            <li>
-                {{ todo.title }}
-                <form method="POST" action="/delete/{{ todo.id }}">
-                    <button type="submit">Delete</button>
-                </form>
-            </li>
-            {% endfor %}
-        </ul>
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Todo カレンダー</title>
+
+    <!-- FullCalendar CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .view-switch {
+        text-align: center;
+        margin-bottom: 15px;
+      }
+
+      #calendar {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      #listView {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      li {
+        padding: 8px;
+        border-bottom: 1px solid #ccc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .done {
+        text-decoration: line-through;
+        color: gray;
+      }
+    </style>
+  </head>
+
+  <body>
+    {% if user %}
+    <!-- ヘッダー -->
+    <div class="header">
+      <div>👋 {{ user.name }} さん</div>
+      <a href="{{ url_for('logout') }}">ログアウト</a>
     </div>
-</body>
+
+    <!-- 視図切替 -->
+    <div class="view-switch">
+      <button onclick="showCalendar()">📅 カレンダー</button>
+      <button onclick="showList()">📋 一覧</button>
+    </div>
+
+    <!-- カレンダー表示 -->
+    <div id="calendarView">
+      <div id="calendar"></div>
+    </div>
+
+    <!-- 一覧表示 -->
+    <div id="listView" style="display: none">
+      <ul id="todoList"></ul>
+    </div>
+
+    {% else %}
+    <p>ログインしてください</p>
+    <a href="{{ url_for('login') }}">
+      <button>Google でログイン</button>
+    </a>
+    {% endif %}
+
+    <!-- FullCalendar JS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    {% if user %}
+    <script>
+      let calendar;
+      let todosCache = [];
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const calendarEl = document.getElementById("calendar");
+
+        calendar = new FullCalendar.Calendar(calendarEl, {
+          locale: "ja",
+          initialView: "dayGridMonth",
+
+          eventSources: [
+            { events: fetchTodos },
+            { events: fetchHolidays }, // ← 日本祝日
+          ],
+
+          // 日付クリック → 追加
+          dateClick(info) {
+            addTodo(info.dateStr);
+          },
+
+          // Todo クリック → 編集 / 削除
+          eventClick(info) {
+            const id = info.event.id;
+            const title = info.event.title;
+
+            const action = prompt(
+              "操作を選択してください\n" +
+                "1: タイトル変更\n" +
+                "2: 完了 / 未完了 切替\n" +
+                "3: 削除\n\n" +
+                "キャンセルで中止",
+              "1",
+            );
+
+            if (!action) return;
+
+            if (action === "1") editTodo(id, title);
+            if (action === "2")
+              toggleTodo(id, info.event.backgroundColor === "#999");
+            if (action === "3") deleteTodo(id);
+          },
+        });
+
+        calendar.render();
+      });
+
+      /* =========================
+         データ取得（共通）
+      ========================= */
+      function fetchTodos(fetchInfo, successCallback) {
+        fetch("/api/todos")
+          .then((res) => res.json())
+          .then((data) => {
+            todosCache = data;
+            successCallback(data);
+            renderList();
+          });
+      }
+
+      function fetchHolidays(fetchInfo, successCallback) {
+        fetch("https://holidays-jp.github.io/api/v1/date.json")
+          .then((res) => res.json())
+          .then((data) => {
+            const events = Object.entries(data).map(([date, name]) => ({
+              title: name,
+              start: date,
+              allDay: true,
+              color: "red",
+              editable: false,
+              extendedProps: {
+                isHoliday: true,
+              },
+            }));
+            successCallback(events);
+          });
+      }
+
+      /* =========================
+         一覧表示
+      ========================= */
+      function renderList() {
+        const list = document.getElementById("todoList");
+        list.innerHTML = "";
+
+        todosCache.forEach((todo) => {
+          const li = document.createElement("li");
+          li.className = todo.color === "#999" ? "done" : "";
+
+          li.innerHTML = `
+            <span>${todo.start} ｜ ${todo.title}</span>
+            <span>
+              <button onclick="editTodo(${todo.id}, '${
+                todo.title
+              }')">✏️</button>
+              <button onclick="toggleTodo(${todo.id}, ${
+                todo.color === "#999"
+              })">✅</button>
+              <button onclick="deleteTodo(${todo.id})">🗑</button>
+            </span>
+          `;
+
+          list.appendChild(li);
+        });
+      }
+
+      /* =========================
+         CRUD 操作
+      ========================= */
+      function addTodo(dateStr) {
+        const title = prompt("Todo を入力してください");
+        if (!title) return;
+
+        fetch("/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, due_date: dateStr }),
+        }).then(refreshAll);
+      }
+
+      function editTodo(id, currentTitle) {
+        const title = prompt("新しいタイトル", currentTitle);
+        if (!title) return;
+
+        fetch(`/api/todos/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        }).then(refreshAll);
+      }
+
+      function toggleTodo(id, completed) {
+        fetch(`/api/todos/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_completed: !completed }),
+        }).then(refreshAll);
+      }
+
+      function deleteTodo(id) {
+        if (!confirm("本当に削除しますか？")) return;
+
+        fetch(`/api/todos/${id}`, { method: "DELETE" }).then(refreshAll);
+      }
+
+      function refreshAll() {
+        calendar.refetchEvents();
+      }
+
+      /* =========================
+         視図切替
+      ========================= */
+      function showCalendar() {
+        document.getElementById("calendarView").style.display = "block";
+        document.getElementById("listView").style.display = "none";
+        calendar.refetchEvents();
+      }
+
+      function showList() {
+        document.getElementById("calendarView").style.display = "none";
+        document.getElementById("listView").style.display = "block";
+      }
+    </script>
+    {% endif %}
+  </body>
 </html>
