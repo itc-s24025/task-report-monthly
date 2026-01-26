@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from modules.todo import db, Todo
+from modules.category import Category
+from modules.todo import Todo
+from modules.db_instance import db
 from api.task import  bp
 import os
 
