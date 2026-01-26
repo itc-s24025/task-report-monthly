@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from database.modules import db, Todo
+from modules.todo import db, Todo
 from api.task import  bp
 import os
 
@@ -26,7 +26,7 @@ def create_app():
         if USE_POSTGRESQL:
             db_info = {
                 'type': 'PostgreSQL',
-                'database': 'todo_db',
+                'modules': 'todo_db',
                 'user': 'todo_user',
                 'host': 'localhost'
             }

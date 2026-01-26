@@ -1,5 +1,5 @@
 from flask import Blueprint,request, redirect, url_for
-from database.modules import db, Todo
+from modules.todo import db, Todo
 
 bp = Blueprint('task', __name__)
 
