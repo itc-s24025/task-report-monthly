@@ -6,7 +6,11 @@ bp = Blueprint('task', __name__)
 @bp.route("/add", methods=["POST"])
 def add():
     title = request.form.get("title")
-    new_todo = Todo(title=title)
+    start_time = request.form.get("start_time")
+    end_time = request.form.get("end_time")
+    category_id = request.form.get("category_id")
+    memo = request.form.get("memo")
+    new_todo = Todo(title=title, start_time=start_time, category_id=category_id, end_time=end_time, memo=memo)
     db.session.add(new_todo)
     db.session.commit()
     return redirect(url_for("home"))
@@ -24,6 +28,14 @@ def update(todo_id):
     if todo is None:
         return "Todo not found", 404
     title = request.form.get("title")
+    start_time = request.form.get("start_time")
+    end_time = request.form.get("end_time")
+    category_id = request.form.get("category_id")
+    memo = request.form.get("memo")
     todo.title = title
+    todo.start_time = start_time
+    todo.end_time = end_time
+    todo.category_id = category_id
+    todo.memo = memo
     db.session.commit()
     return redirect(url_for("home"))
