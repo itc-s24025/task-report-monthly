@@ -1,13 +1,7 @@
 from flask import Blueprint,request, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from database.modules import db, Todo
 
 bp = Blueprint('task', __name__)
-
-class Todo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100))
 
 @bp.route("/add", methods=["POST"])
 def add():
@@ -17,10 +11,19 @@ def add():
     db.session.commit()
     return redirect(url_for("home"))
 
-
 @bp.route("/delete/<int:todo_id>", methods=["POST"])
 def delete(todo_id):
     todo = Todo.query.filter_by(id=todo_id).first()
     db.session.delete(todo)
+    db.session.commit()
+    return redirect(url_for("home"))
+
+@bp.route("/update/<int:todo_id>", methods=["POST"])
+def update(todo_id):
+    todo = Todo.query.get(todo_id)
+    if todo is None:
+        return "Todo not found", 404
+    title = request.form.get("title")
+    todo.title = title
     db.session.commit()
     return redirect(url_for("home"))
