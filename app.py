@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from api.task import add, delete, db, bp, Todo
+from database.modules import db, Todo
+from api.task import  bp
 import os
 
 def create_app():
@@ -15,7 +16,6 @@ def create_app():
 
     db.init_app(app)
     app.register_blueprint(bp, url_prefix='/api/task')
-
 
     @app.route("/", methods=["GET", "POST"])
     def home():
