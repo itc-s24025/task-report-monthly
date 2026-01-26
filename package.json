@@ -1,0 +1,23 @@
+{
+  "name": "task-report-monthly",
+  "version": "1.0.0",
+  "description": "IT業務の月次作業報告ツール (Flask + Next.js)",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "start": "pnpm -r start",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "backend:dev": "pnpm -F backend dev",
+    "frontend:dev": "pnpm -F frontend dev"
+  },
+  "volta": {
+    "node": "24.11.0",
+    "pnpm": "10.28.0"
+  }
+}

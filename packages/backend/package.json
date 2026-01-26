@@ -1,0 +1,11 @@
+{
+  "name": "@task-report-monthly/backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Flask backend for task-report-monthly",
+  "scripts": {
+    "dev": "python3 app.py",
+    "start": "python3 app.py",
+    "build": "echo 'No build step for Python backend'"
+  }
+}
