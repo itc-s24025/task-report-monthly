@@ -194,6 +194,15 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Node.js and pnpm
+node_modules/
+*.pnpm-lock.yaml
+pnpm-lock.yaml
+.pnpm-store/
+.next/
+dist/
+build/
+
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
