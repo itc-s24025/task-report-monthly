@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from modules.category import Category
 from modules.todo import Todo
 from modules.db_instance import db
-from api.task import  bp
+from api.task import task_bp
+from api.time import time_bp
 import os
 
 def create_app():
@@ -17,7 +17,8 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
-    app.register_blueprint(bp, url_prefix='/api/task')
+    app.register_blueprint(task_bp, url_prefix='/api/task')
+    app.register_blueprint(time_bp, url_prefix='/api/time')
 
     @app.route("/", methods=["GET", "POST"])
     def home():
