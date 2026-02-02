@@ -1,0 +1,24 @@
+<h2>タスク登録</h2>
+
+<form method="post" action="{{ url_for('task.create_task') }}">
+  <div>
+    <label>プロジェクト名（必須）</label><br />
+    <input type="text" name="task_name" maxlength="100" required />
+  </div>
+
+  <div>
+    <label>カテゴリ</label><br />
+    <select name="category_id">
+      {% for c in categories %}
+      <option value="{{ c.id }}">{{ c.category_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label>メモ（任意）</label><br />
+    <textarea name="memo" maxlength="500"></textarea>
+  </div>
+
+  <button type="submit">登録</button>
+</form>
