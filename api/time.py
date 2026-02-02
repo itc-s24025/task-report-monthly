@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint,request, redirect, url_for
 from modules.todo import db, Todo
 
-time_bp = Blueprint('task', __name__)
+time_bp = Blueprint('time', __name__)
 
 @time_bp.route("/<int:todo_id>/start", methods=["POST"])
 def start(todo_id):
