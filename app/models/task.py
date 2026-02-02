@@ -37,4 +37,24 @@ class Task(db.Model):
         default=datetime.utcnow
     )
 
+    started_date = db.Column(
+        db.Date,
+        nullable=True
+    )
+
+    started_time = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    ended_date = db.Column(
+        db.Date,
+        nullable=True
+    )
+
+    ended_time = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
     category = db.relationship("Category")
