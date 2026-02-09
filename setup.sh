@@ -38,7 +38,7 @@ pip3 install -q psycopg2-binary flask flask-sqlalchemy
 
 # Update app.py with PostgreSQL connection
 echo "Updating app.py for PostgreSQL..."
-sed -i "s|sqlite:///db.sqlite|postgresql://${DB_USER}:${DB_PASSWORD}@localhost/${DB_NAME}|g" app.py
+sed -i "s|sqlite:///db.sqlite|postgresql://${DB_USER}:${DB_PASSWORD}@localhost/${DB_NAME}|g" run.py
 
 # Initialize database tables
 echo "Initializing database tables..."
@@ -50,4 +50,4 @@ echo "Database: ${DB_NAME}"
 echo "User: ${DB_USER}"
 echo "Password: ${DB_PASSWORD}"
 echo ""
-echo "Run the app with: python3 app.py"
+echo "Run the app with: python3 run.py"
