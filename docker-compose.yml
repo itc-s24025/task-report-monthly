@@ -1,6 +1,9 @@
 version: '3.8'
 
 services:
+  web:
+    env_file:
+      - .env
   postgres:
     image: postgres:14-alpine
     container_name: flask_todo_postgres

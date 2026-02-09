@@ -2,6 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
 from app.config import Config
+from flask_migrate import Migrate
 
 db = SQLAlchemy()
 oauth = OAuth()
@@ -27,6 +28,8 @@ def create_app():
 
     from app.routes.task import task_bp
     app.register_blueprint(task_bp)
+
+    Migrate(app, db)
 
     return app
 

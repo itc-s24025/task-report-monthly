@@ -1,13 +1,13 @@
 from datetime import datetime
 from flask import Blueprint,request, redirect, url_for
-from modules.todo import db, Todo
+from app.models.task import db, Task
 
 time_bp = Blueprint('time', __name__)
 
 @time_bp.route("/<int:todo_id>/start", methods=["POST"])
 def start(todo_id):
-    todo_id = Todo.query.get(todo_id)
-    todo = Todo.query.get(todo_id)
+    todo_id = (Task.query.get(todo_id))
+    todo = Task.query.get(todo_id)
     if todo is None:
         return "Todo not found", 404
     todo.started_by_time = datetime.now()
@@ -16,7 +16,7 @@ def start(todo_id):
 
 @time_bp.route("/<int:todo_id>/end", methods=["POST"])
 def end(todo_id):
-    todo = Todo.query.get(todo_id)
+    todo = Task.query.get(todo_id)
     now = datetime.now()
     if todo is None:
         return "Todo not found", 404

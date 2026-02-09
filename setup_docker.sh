@@ -25,7 +25,7 @@ fi
 
 # Start PostgreSQL container
 echo "Starting PostgreSQL container..."
-docker-compose up -d
+docker compose up -d
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
