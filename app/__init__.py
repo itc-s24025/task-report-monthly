@@ -25,6 +25,10 @@ def create_app():
     from app.routes.auth import auth_bp
     app.register_blueprint(auth_bp)
 
+    # register API blueprints
+    from app.routes.category import category_bp
+    app.register_blueprint(category_bp)
+
     from app.routes.task import task_bp
     app.register_blueprint(task_bp)
 
