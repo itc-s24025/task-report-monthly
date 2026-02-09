@@ -1,6 +1,6 @@
 <h2>タスク登録</h2>
 
-<form method="post" action="{{ url_for('task.create_task') }}">
+<form method="post" action="{{ url_for('auth.create_task_page') }}">
   <div>
     <label>プロジェクト名（必須）</label><br />
     <input type="text" name="task_name" maxlength="100" required />

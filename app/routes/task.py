@@ -1,8 +1,22 @@
-from flask import Blueprint, request, jsonify, session, redirect, url_for, Flask, render_template
+from flask import Blueprint, request, jsonify, session, redirect, url_for
+from datetime import datetime
 from app import db
 from app.models.task import Task
 
 task_bp = Blueprint("task", __name__, url_prefix="/api/tasks")
+
+
+def _parse_datetime(s):
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s)
+    except Exception:
+        try:
+            return datetime.fromisoformat(s + 'T00:00:00')
+        except Exception:
+            return None
+
 
 @task_bp.route("", methods=["POST"])
 def create_task():
@@ -19,6 +33,27 @@ def create_task():
     task.end_time = data["end_time"]
     task.category_id = data["category_id"]
     task.memo = data.get("memo", "")
+    task = Task(
+        user_id=user_id,
+        task_name=data.get("task_name","(無題)"),
+        category_id=data.get("category_id"),
+        memo=data.get("memo"),
+    )
+
+    # optional: created_date (keep backward compatibility)
+    if data.get("created_date"):
+        try:
+            task.created_date = datetime.strptime(data["created_date"], "%Y-%m-%d").date()
+        except Exception:
+            pass
+
+    # calendar fields
+    start = _parse_datetime(data.get("start") or data.get("start_time"))
+    end = _parse_datetime(data.get("end") or data.get("end_time"))
+    if start:
+        task.start_time = start
+    if end:
+        task.end_time = end
 
     db.session.add(task)
     db.session.commit()

@@ -70,7 +70,17 @@
       .content-section.active {
         display: block;
       }
+
+      /* calendar container */
+      #calendar {
+        max-width: 900px;
+        margin: 0 auto;
+      }
     </style>
+
+    <!-- FullCalendar CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   </head>
 
   <body>
@@ -100,8 +110,24 @@
       <!-- コンテンツ -->
       <div class="content">
         <div id="task" class="content-section active">
-          {% include "task_create.html" %}
-        </div>
+          <div id="calendar"></div>
+
+          <div style="max-width:900px;margin:8px auto;display:flex;justify-content:flex-end;">
+            <button id="open-new-task-modal" style="padding:8px 12px;background:#4a90e2;color:#fff;border-radius:6px;border:0;cursor:pointer;">＋ 新規タスク</button>
+          </div>
+
+           <!-- 日付ごとのタスクリストおよび新規作成フォーム -->
+           <div id="day-panel" style="max-width:900px;margin:20px auto;padding:16px;border:1px solid #eee;border-radius:6px;background:#fafafa;">
+             <h3 id="day-panel-title"></h3>
+-            <ul id="day-task-list" style="list-style:none;padding:0;margin:0 0 16px 0;"></ul>
++            <div id="day-task-list" style="display:flex;flex-direction:column;gap:12px;margin:0 0 16px 0;"></div>
+
+-            <h4>タスクを追加</h4>
+-            <form id="new-task-form">
++            <h4>タスクを追加</h4>
++            <p>右上の「＋ 新規タスク」ボタンからタスクを作成できます。</p>
+          </div>
+         </div>
 
         <div id="today" class="content-section">
           <h2>本日の一覧</h2>
@@ -115,6 +141,34 @@
       </div>
     </div>
 
+    <!-- New Task Modal -->
+    <div id="new-task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:1000;">
+      <div style="background:#fff;padding:20px;border-radius:8px;max-width:600px;width:90%;position:relative;">
+        <button id="close-new-task-modal" style="position:absolute;right:12px;top:12px;border:0;background:transparent;font-size:18px;cursor:pointer;">✕</button>
+        <h3>新規タスク作成</h3>
+        <form id="new-task-form">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+            <input type="text" id="new-task-name" placeholder="タスク名" required style="flex:1;padding:8px;" />
+            <select id="category-select" style="padding:8px;"></select>
+          </div>
+          <div id="modal-category-list" style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center;overflow-x:auto;margin-bottom:8px;padding:4px 8px;">
+                <!-- category buttons rendered here (modal) -->
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <input type="datetime-local" id="new-start" style="flex:1;padding:8px;" />
+            <input type="datetime-local" id="new-end" style="flex:1;padding:8px;" />
+          </div>
+          <div style="margin-bottom:8px;">
+            <textarea id="new-memo" placeholder="メモ" maxlength="500" style="width:100%;padding:8px;height:80px;"></textarea>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="cancel-new-task" style="padding:8px 12px;">キャンセル</button>
+            <button type="submit" style="padding:8px 12px;background:#4a90e2;color:#fff;border:0;border-radius:6px;">作成</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script>
       function showSection(id) {
         document.querySelectorAll(".content-section").forEach((section) => {
@@ -122,6 +176,251 @@
         });
         document.getElementById(id).classList.add("active");
       }
-    </script>
-  </body>
-</html>
+
+      document.addEventListener('DOMContentLoaded', async function() {
+        const calendarEl = document.getElementById('calendar');
+        let selectedDate = new Date().toISOString().slice(0,10);
+
+        function isoDatePlusDays(dateStr, days){
+          const d = new Date(dateStr + 'T00:00:00');
+          d.setDate(d.getDate() + days);
+          return d.toISOString().slice(0,10);
+        }
+
+        function formatDateJP(dateStr){
+          const d = new Date(dateStr + 'T00:00:00');
+          return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+        }
+
+        async function fetchCategories(){
+          try{
+            const r = await fetch('/api/categories');
+            console.log('GET /api/categories', r.status);
+            if(!r.ok) return [];
+            const j = await r.json();
+            console.log('categories', j);
+            return j;
+          }catch(e){
+            console.error('fetchCategories error', e);
+            return []
+          }
+        }
+
+        async function populateCategories(){
+          const cats = await fetchCategories();
+          const sel = document.getElementById('category-select');
+          sel.innerHTML = '<option value="">(カテゴリなし)</option>' + cats.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('');
+        }
+
+        async function renderDayTasks(dateStr){
+          selectedDate = dateStr;
+          document.getElementById('day-panel-title').textContent = formatDateJP(dateStr) + ' のタスク';
+          const start = dateStr;
+          const end = isoDatePlusDays(dateStr, 1);
+          const r = await fetch(`/api/tasks?start=${start}&end=${end}`);
+          if(!r.ok){ document.getElementById('day-task-list').innerHTML = '<li>読み込み失敗</li>'; return; }
+          const tasks = await r.json();
+          const container = document.getElementById('day-task-list');
+          container.innerHTML = tasks.map(t => {
+            const startTime = t.start ? (new Date(t.start)).toLocaleString() : '';
+            return `<div style="padding:12px;border:1px solid #eee;border-radius:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style=\"font-weight:600;\">${t.title}</div>
+                <div style=\"font-size:12px;color:#666;\">${startTime}</div>
+                <div style=\"font-size:13px;color:#333;\">${t.extendedProps && t.extendedProps.memo ? t.extendedProps.memo : ''}</div>
+              </div>
+              <div style=\"display:flex;gap:8px;align-items:center;\">
+                <a href=\"/tasks/create?clone_id=${t.id}\" style=\"padding:6px 8px;border-radius:6px;border:1px solid #ddd;text-decoration:none;color:#333;\">複製</a>
+                <button data-id=\"${t.id}\" class=\"delete-task-btn\" style=\"padding:6px 8px;border-radius:6px;border:1px solid #e74c3c;background:#fff;color:#e74c3c;cursor:pointer;\">削除</button>
+              </div>
+            </div>`;
+          }).join('') || '<div>該当タスクはありません</div>';
+          // attach delete handlers
+          container.querySelectorAll('.delete-task-btn').forEach(b=>{
+            b.addEventListener('click', async function(){
+              const id = this.dataset.id;
+              if(!confirm('このタスクを削除しますか？')) return;
+              const r = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+              if(r.ok){ renderDayTasks(dateStr); calendar.refetchEvents(); } else { alert('削除失敗'); }
+            });
+          });
+        }
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'timeGridWeek',
+          headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,dayGridMonth' },
+          selectable: true,
+          editable: true,
+          events: function(info, successCallback, failureCallback) {
+            fetch(`/api/tasks?start=${info.startStr}&end=${info.endStr}`)
+              .then(r => r.json())
+              .then(data => successCallback(data))
+              .catch(err => failureCallback(err));
+          },
+          dateClick: function(info) {
+            // 日付クリックで下部リストを更新
+            renderDayTasks(info.dateStr);
+          },
+          eventDrop: function(info) {
+            fetch(`/api/tasks/${info.event.id}`, {
+              method: 'PUT',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({
+                start: info.event.start ? info.event.start.toISOString() : null,
+                end: info.event.end ? info.event.end.toISOString() : null
+              })
+            }).then(()=> { calendar.refetchEvents(); renderDayTasks(selectedDate); });
+          },
+          eventClick: function(info) {
+            if (confirm('このタスクを削除しますか？')) {
+              fetch(`/api/tasks/${info.event.id}`, { method: 'DELETE' })
+                .then(()=> { calendar.refetchEvents(); renderDayTasks(selectedDate); });
+            }
+          },
+          datesSet: function(info){
+            // 初期表示時に選択日を今日にしてリストを表示
+            // 当月表示切替などのタイミングで呼ばれる
+            const todayStr = new Date().toISOString().slice(0,10);
+            renderDayTasks(todayStr);
+          }
+        });
+        calendar.render();
+
+        // 新規登録フォーム処理（modal に対応）
+        const openModalBtn = document.getElementById('open-new-task-modal');
+        const modal = document.getElementById('new-task-modal');
+        const closeModal = document.getElementById('close-new-task-modal');
+        const cancelBtn = document.getElementById('cancel-new-task');
+        const form = document.getElementById('new-task-form');
+        const startInput = document.getElementById('new-start');
+        const endInput = document.getElementById('new-end');
+        const nameInput = document.getElementById('new-task-name');
+        const memoInput = document.getElementById('new-memo');
+
+        function openModal(){
+          modal.style.display = 'flex';
+          // reset form
+          form.reset();
+          setDefaultDateInputs(selectedDate);
+        }
+
+        function hideModal(){
+          modal.style.display = 'none';
+        }
+
+        openModalBtn.addEventListener('click', () => { openModal(); });
+        closeModal.addEventListener('click', () => { hideModal(); });
+        cancelBtn.addEventListener('click', (e)=>{ e.preventDefault(); hideModal(); });
+
+        // set sensible defaults for start/end based on selectedDate
+        function setDefaultDateInputs(dateStr){
+          startInput.value = dateStr + 'T09:00';
+          endInput.value = dateStr + 'T10:00';
+        }
+        setDefaultDateInputs(selectedDate);
+
+        // render horizontal category buttons into the modal list
+        function renderCategoryButtons(cats){
+          const container = document.getElementById('modal-category-list');
+           container.innerHTML = '';
+           if(cats && cats.length > 0){
+             cats.forEach(c => {
+               const btn = document.createElement('button');
+               btn.type = 'button';
+               btn.textContent = c.category_name;
+               btn.style.padding = '6px 10px';
+               btn.style.border = '1px solid #ddd';
+               btn.style.borderRadius = '16px';
+               btn.style.background = c.color || '#fff';
+               btn.style.cursor = 'pointer';
+               btn.dataset.catId = c.id;
+               btn.addEventListener('click', function(){
+                document.getElementById('category-select').value = this.dataset.catId;
+                container.querySelectorAll('button').forEach(b=> b.style.outline='');
+                this.style.outline = '2px solid #4a90e2';
+               });
+               container.appendChild(btn);
+             });
+           }
+           const addBtn = document.createElement('button');
+           addBtn.type = 'button';
+           addBtn.textContent = '＋ 新規カテゴリ';
+           addBtn.style.padding = '6px 10px';
+           addBtn.style.border = '1px dashed #aaa';
+           addBtn.style.borderRadius = '16px';
+           addBtn.style.background = '#fff';
+           addBtn.style.cursor = 'pointer';
+           addBtn.style.color = '#222';
+           addBtn.addEventListener('click', function(){
+             const name = prompt('新しいカテゴリ名を入力');
+             if(!name) return;
+             const color = prompt('色（例: #ff0000）を入力（空欄でデフォルト）');
+             fetch('/api/categories', {
+               method: 'POST',
+               headers: {'Content-Type':'application/json'},
+               body: JSON.stringify({ category_name: name, color: color })
+             }).then(async r=>{
+               if(r.ok){
+                 const j = await r.json();
+                 const cats = await fetchCategories();
+                 renderCategoryButtons(cats);
+                 document.getElementById('category-select').value = j.id;
+               }else{
+                 alert('カテゴリ作成に失敗しました');
+               }
+             }).catch(e=>{ console.error('create category error', e); alert('カテゴリ作成に失敗しました'); });
+           });
+           container.appendChild(addBtn);
+         }
+
+        // populate hidden select used by the form
+        function populateHiddenSelect(cats){
+          const sel = document.getElementById('category-select');
+          sel.innerHTML = '<option value="">(カテゴリなし)</option>' + (cats && cats.length ? cats.map(c=>`<option value="${c.id}">${c.category_name}</option>`).join('') : '');
+        }
+
+         // populate select and buttons
+         async function initCategories(){
+           const cats = await fetchCategories();
+           populateHiddenSelect(cats);
+           renderCategoryButtons(cats);
+         }
+         await initCategories();
+
+        form.addEventListener('submit', async function(e){
+          e.preventDefault();
+          const payload = {
+            task_name: nameInput.value,
+            category_id: document.getElementById('category-select').value || null,
+            memo: memoInput.value || null,
+            start: startInput.value || (selectedDate + 'T09:00'),
+            end: endInput.value || (selectedDate + 'T10:00')
+          };
+          const r = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(r.ok){
+            hideModal();
+            nameInput.value=''; memoInput.value='';
+            calendar.refetchEvents();
+            renderDayTasks(selectedDate);
+          }else{
+            alert('作成に失敗しました');
+          }
+        });
+
+        // close modal handler
+        document.getElementById('close-new-task-modal').addEventListener('click', function(){
+          document.getElementById('new-task-modal').style.display = 'none';
+        });
+
+        // cancel button in modal
+        document.getElementById('cancel-new-task').addEventListener('click', function(){
+          document.getElementById('new-task-modal').style.display = 'none';
+        });
+      });
+     </script>
+   </body>
+ </html>
