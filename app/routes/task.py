@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session, redirect, url_for
+from flask import Blueprint, request, jsonify, session
 from datetime import datetime
 from app import db
 from app.models.task import Task
@@ -78,7 +78,7 @@ def delete(todo_id):
     todo = Task.query.filter_by(id=todo_id, user_id=user_id).first()
     db.session.delete(todo)
     db.session.commit()
-    return redirect(url_for("home"))
+    return jsonify({"status": "deleted"})
 
 
 @task_bp.route("/update/<int:todo_id>", methods=["POST"])
@@ -89,8 +89,8 @@ def update(todo_id):
 
     todo = Task.query.filter_by(id=todo_id, user_id=user_id).first()
     if todo is None:
-        return "Todo not found", 404
-    title = request.form.get("title")
+        return jsonify({"error": "not_found"}), 404
+    title = request.form.get("task_name")
     start_time = request.form.get("start_time")
     end_time = request.form.get("end_time")
     category_id = request.form.get("category_id")
@@ -101,4 +101,5 @@ def update(todo_id):
     todo.category_id = category_id
     todo.memo = memo
     db.session.commit()
-    return redirect(url_for("home"))
+    # Return JSON for API clients
+    return jsonify({"status": "updated"})
