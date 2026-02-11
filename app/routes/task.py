@@ -18,50 +18,58 @@ def _parse_datetime(s):
             return None
 
 
-@task_bp.route("", methods=["POST"])
+@task_bp.route("", methods=["POST","GET"])
 def create_task():
     user_id = session.get("user_id")
     if not user_id:
         return jsonify({"error": "unauthorized"}), 401
 
-    data = request.get_json()
+    if request.method == "GET":
+        # データベースからログインユーザーのタスクを取得
+        tasks = Task.query.filter_by(user_id=user_id).all()
 
-    task = Task()
-    task.user_id = user_id
-    task.task_name = data["task_name"]
-    task.start_time = data["start_time"]
-    task.end_time = data["end_time"]
-    task.category_id = data["category_id"]
-    task.memo = data.get("memo", "")
-    task = Task(
-        user_id=user_id,
-        task_name=data.get("task_name","(無題)"),
-        category_id=data.get("category_id"),
-        memo=data.get("memo"),
-    )
+        # FullCalendarが理解できる形式に変換
+        return jsonify([{
+            'id': t.id,
+            'task_name': t.task_name,
+            'start_time': t.start_time.isoformat() if t.start_time else None,
+            'end_time': t.end_time.isoformat() if t.end_time else None,
+            'extendedProps': {'memo': t.memo}
+        } for t in tasks])
 
-    # optional: created_date (keep backward compatibility)
-    if data.get("created_date"):
-        try:
-            task.created_date = datetime.strptime(data["created_date"], "%Y-%m-%d").date()
-        except Exception:
-            pass
+    elif request.method == "POST":
+        data = request.get_json()
 
-    # calendar fields
-    start = _parse_datetime(data.get("start") or data.get("start_time"))
-    end = _parse_datetime(data.get("end") or data.get("end_time"))
-    if start:
-        task.start_time = start
-    if end:
-        task.end_time = end
+        task = Task()
+        task.user_id = user_id
+        task.task_name = data["task_name"]
+        task.start_time = data["start_time"]
+        task.end_time = data["end_time"]
+        task.category_id = data.get("category_id")
+        task.memo = data.get("memo", "")
 
-    db.session.add(task)
-    db.session.commit()
+        # optional: created_date (keep backward compatibility)
+        if data.get("created_date"):
+            try:
+                task.created_date = datetime.strptime(data["created_date"], "%Y-%m-%d").date()
+            except Exception:
+                pass
 
-    return jsonify({"status": "created", "task_id": task.id})
+        # calendar fields
+        start = _parse_datetime(data.get("start") or data.get("start_time"))
+        end = _parse_datetime(data.get("end") or data.get("end_time"))
+        if start:
+            task.start_time = start
+        if end:
+            task.end_time = end
+
+        db.session.add(task)
+        db.session.commit()
+
+        return jsonify({"status": "created", "task_id": task.id})
 
 
-@task_bp.route("/delete/<int:todo_id>", methods=["POST"])
+@task_bp.route("/<int:todo_id>", methods=["DELETE"])
 def delete(todo_id):
     user_id = session.get("user_id")
     if not user_id:

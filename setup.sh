@@ -37,12 +37,12 @@ echo "Installing Python dependencies..."
 pip3 install -q psycopg2-binary flask flask-sqlalchemy
 
 # Update app.py with PostgreSQL connection
-echo "Updating app.py for PostgreSQL..."
+echo "Updating run.py for PostgreSQL..."
 sed -i "s|sqlite:///db.sqlite|postgresql://${DB_USER}:${DB_PASSWORD}@localhost/${DB_NAME}|g" run.py
 
 # Initialize database tables
 echo "Initializing database tables..."
-python3 -c "from app import app, db; app.app_context().push(); db.create_all()"
+python3 -c "from app import db; from run import app; app.app_context().push(); db.create_all()"
 
 echo ""
 echo "=== Setup Complete! ==="

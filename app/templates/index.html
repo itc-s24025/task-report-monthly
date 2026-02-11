@@ -148,18 +148,18 @@
         <h3>新規タスク作成</h3>
         <form id="new-task-form">
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
-            <input type="text" id="new-task-name" placeholder="タスク名" required style="flex:1;padding:8px;" />
+            <input type="text" id="task-name" placeholder="タスク名" required style="flex:1;padding:8px;" />
             <select id="category-select" style="padding:8px;"></select>
           </div>
           <div id="modal-category-list" style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center;overflow-x:auto;margin-bottom:8px;padding:4px 8px;">
                 <!-- category buttons rendered here (modal) -->
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-            <input type="datetime-local" id="new-start" style="flex:1;padding:8px;" />
-            <input type="datetime-local" id="new-end" style="flex:1;padding:8px;" />
+            <input type="datetime-local" id="start_time" style="flex:1;padding:8px;" />
+            <input type="datetime-local" id="end_time" style="flex:1;padding:8px;" />
           </div>
           <div style="margin-bottom:8px;">
-            <textarea id="new-memo" placeholder="メモ" maxlength="500" style="width:100%;padding:8px;height:80px;"></textarea>
+            <textarea id="memo" placeholder="メモ" maxlength="500" style="width:100%;padding:8px;height:80px;"></textarea>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;">
             <button type="button" id="cancel-new-task" style="padding:8px 12px;">キャンセル</button>
@@ -292,10 +292,10 @@
         const closeModal = document.getElementById('close-new-task-modal');
         const cancelBtn = document.getElementById('cancel-new-task');
         const form = document.getElementById('new-task-form');
-        const startInput = document.getElementById('new-start');
-        const endInput = document.getElementById('new-end');
-        const nameInput = document.getElementById('new-task-name');
-        const memoInput = document.getElementById('new-memo');
+        const startInput = document.getElementById('start_time');
+        const endInput = document.getElementById('end_time');
+        const nameInput = document.getElementById('task-name');
+        const memoInput = document.getElementById('memo');
 
         function openModal(){
           modal.style.display = 'flex';
@@ -393,8 +393,8 @@
             task_name: nameInput.value,
             category_id: document.getElementById('category-select').value || null,
             memo: memoInput.value || null,
-            start: startInput.value || (selectedDate + 'T09:00'),
-            end: endInput.value || (selectedDate + 'T10:00')
+            start_time: startInput.value || (selectedDate + 'T09:00'),
+            end_time: endInput.value || (selectedDate + 'T10:00')
           };
           const r = await fetch('/api/tasks', {
             method: 'POST',
