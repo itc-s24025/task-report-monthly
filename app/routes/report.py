@@ -4,20 +4,23 @@ from sqlalchemy import func
 from app.models.task import Task
 from app import db
 
-filter_bp = Blueprint('filter', __name__)
+report_bp = Blueprint('filter', __name__, url_prefix="/api/report")
 
-@filter_bp.route("category", methods=['GET'])
+@report_bp.route("category", methods=['GET'])
 def categories():
     category_all = db.session.query(Task.category_id).group_by(Task.category_id).all()
     return redirect("categories.html", category_all=category_all)
 
-@filter_bp.route("category/<int:category_id>", methods=["GET"])
+@report_bp.route("category/<int:category_id>", methods=["GET"])
 def category(category_id):
     todo_list = Task.query.filter_by(category_id=category_id).all()
     return redirect("category.html", todo_list=todo_list)
 
-@filter_bp.route("/<int:year>/<int:month>", methods=["GET"])
-def monthly(year, month):
+@report_bp.route("monthly", methods=["GET"])
+def monthly():
+    data = request.get_json()
+    year = data["year"]
+    month = data["month"]
     month_todo = db.session.query(
         extract('year', Task.started_date).label('year'),
         extract('month', Task.started_date).label('month'),
