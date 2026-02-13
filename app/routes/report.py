@@ -11,10 +11,25 @@ def categories():
     category_all = db.session.query(Task.category_id).group_by(Task.category_id).all()
     return redirect("categories.html", category_all=category_all)
 
-@report_bp.route("category/<int:category_id>", methods=["GET"])
-def category(category_id):
-    todo_list = Task.query.filter_by(category_id=category_id).all()
-    return redirect("category.html", todo_list=todo_list)
+@report_bp.route("category", methods=["GET"])
+def category():
+    todo_list = (db.session.query(
+        func.sum(Task.duration_seconds).label('total_duration'),
+        func.sum(Task.end_time - Task.start_time).label('planned_duration')
+    ).group_by(
+        Task.category_id
+    ).order_by(func.sum(Task.duration_seconds).desc()).all())
+
+    return jsonify({
+        "data": [
+            {
+                "category_name": todo.category.category_name if todo.category else "未分類",
+                "total_hour": round(todo.total_duration / 60 , 1),
+                "progress": round(round(todo.planned_duration.total_seconds() / 60 , 1) / round(todo.total_duration / 60 , 1)) * 100 if todo.planned_duration else 0
+            }
+            for todo in todo_list
+        ]
+    })
 
 @report_bp.route("monthly", methods=["GET"])
 def monthly():
