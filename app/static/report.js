@@ -4,11 +4,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectBtn = document.getElementById("projectBtn");
   const categoryBtn = document.getElementById("categoryBtn");
   const reportTable = document.getElementById("reportTable");
+  const yearSelect = document.getElementById("yearSelect");
+  const monthSelect = document.getElementById("monthSelect");
 
   // reportTableが存在しない場合は何もしない（index.htmlでの誤動作を防ぐ）
   if (!reportTable) {
     console.log("reportTableが見つかりません。report.jsの初期化をスキップします。");
     return;
+  }
+
+  initYearMonthSelect(yearSelect, monthSelect);
+
+  if (yearSelect && monthSelect) {
+    yearSelect.addEventListener("change", () => {
+      refreshReport();
+    });
+    monthSelect.addEventListener("change", () => {
+      refreshReport();
+    });
   }
 
   if (projectBtn && categoryBtn) {
@@ -26,8 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // レポートセクションが表示されているかチェック
   const reportSection = document.getElementById("report");
   if (reportSection && reportSection.classList.contains("active")) {
-    // 初期表示（カテゴリ表示）
-    loadCategory();
+    // 初期表示（プロジェクト表示）
+    switchTab("project");
 
     const now = new Date();
     loadMonthly(
@@ -36,6 +49,71 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 });
+
+let currentTab = "project";
+
+function initYearMonthSelect(yearSelect, monthSelect) {
+  if (!yearSelect || !monthSelect) {
+    return;
+  }
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const years = [];
+  for (let y = currentYear - 3; y <= currentYear + 1; y += 1) {
+    years.push(y);
+  }
+
+  yearSelect.innerHTML = years
+    .map(year => `<option value="${year}">${year}年</option>`)
+    .join("");
+
+  monthSelect.innerHTML = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    return `<option value="${month}">${month}月</option>`;
+  }).join("");
+
+  yearSelect.value = String(currentYear);
+  monthSelect.value = String(currentMonth);
+}
+
+function getSelectedYearMonth() {
+  const yearSelect = document.getElementById("yearSelect");
+  const monthSelect = document.getElementById("monthSelect");
+
+  return {
+    year: yearSelect ? yearSelect.value : "",
+    month: monthSelect ? monthSelect.value : ""
+  };
+}
+
+function buildYearMonthQuery() {
+  const { year, month } = getSelectedYearMonth();
+  const params = new URLSearchParams();
+
+  if (year) {
+    params.set("year", year);
+  }
+  if (month) {
+    params.set("month", month);
+  }
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function refreshReport() {
+  const { year, month } = getSelectedYearMonth();
+  loadMonthly(year, month);
+
+  if (currentTab === "project") {
+    loadProject();
+  } else {
+    loadCategory();
+  }
+}
 
 function switchTab(type) {
 
@@ -46,6 +124,8 @@ function switchTab(type) {
     .querySelectorAll(".toggle button")
     .forEach(btn => btn.classList.remove("active"));
 
+  currentTab = type;
+
   if (type === "project") {
 
     document
@@ -55,7 +135,8 @@ function switchTab(type) {
     // ===== ヘッダー変更 =====
     headerRow.innerHTML = `
       <th>タスク名</th>
-      <th>日付</th>
+      <th>予定日</th>
+      <th>終了日</th>
       <th>作業時間(h)</th>
       <th>割合(%)</th>
     `;
@@ -82,7 +163,7 @@ function switchTab(type) {
 async function loadCategory() {
   try {
     console.log("カテゴリ別データを読み込み中...");
-    const res = await fetch("/api/report/category");
+    const res = await fetch(`/api/report/category${buildYearMonthQuery()}`);
 
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -116,9 +197,22 @@ async function loadCategory() {
 
 async function loadMonthly(year, month) {
   try {
-    console.log(`月次データを読み込み中... (${year}年${month}月)`);
+    const selected = getSelectedYearMonth();
+    const targetYear = year || selected.year;
+    const targetMonth = month || selected.month;
+
+    const params = new URLSearchParams();
+    if (targetYear) {
+      params.set("year", targetYear);
+    }
+    if (targetMonth) {
+      params.set("month", targetMonth);
+    }
+
+    const query = params.toString();
+    console.log(`月次データを読み込み中... (${targetYear}年${targetMonth}月)`);
     const res = await fetch(
-      `/api/report/monthly?year=${year}&month=${month}`
+      `/api/report/monthly${query ? `?${query}` : ""}`
     );
 
     if (!res.ok) {
@@ -146,7 +240,7 @@ async function loadProject() {
   try {
     console.log("プロジェクト別データを読み込み中...");
 
-    const res = await fetch("/api/report/project");
+    const res = await fetch(`/api/report/project${buildYearMonthQuery()}`);
 
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -167,6 +261,7 @@ async function loadProject() {
         tr.innerHTML = `
           <td>${item.task_name}</td>
           <td>${item.work_date}</td>
+          <td>${item.ended_date}</td>
           <td>${item.total_hour}</td>
           <td>${item.progress}%</td>
         `;
@@ -177,7 +272,7 @@ async function loadProject() {
     } else {
 
       tbody.innerHTML =
-        '<tr><td colspan="4">データがありません</td></tr>';
+        '<tr><td colspan="5">データがありません</td></tr>';
     }
 
   } catch (error) {
@@ -186,6 +281,6 @@ async function loadProject() {
 
     const tbody = document.getElementById("reportBody");
     tbody.innerHTML =
-      '<tr><td colspan="4">データの読み込みに失敗しました</td></tr>';
+      '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
   }
 }

@@ -418,9 +418,11 @@
             // 月次レポートセクションが表示された時にデータを読み込む
             if (id === "report") {
                 // report.jsの関数を呼び出す
-                if (typeof loadCategory === 'function') {
-                    loadCategory();
-                    const now = new Date();
+                if (typeof switchTab === 'function') {
+                    switchTab('project');
+                }
+                const now = new Date();
+                if (typeof loadMonthly === 'function') {
                     loadMonthly(now.getFullYear(), now.getMonth() + 1);
                 }
             }
