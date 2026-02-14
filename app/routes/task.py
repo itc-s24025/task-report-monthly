@@ -28,8 +28,33 @@ def create_task():
         # データベースからログインユーザーのタスクを取得
         tasks = Task.query.filter_by(user_id=user_id).all()
 
+        # 以前は GET でも body(JSON) で start/end を受け取っていたが
+        # クライアントからは query パラメータで渡すのが一般的なので両方対応する
+        data = request.get_json(silent=True) or {}
+        # request.args を優先して使う
+        start = request.args.get('start') or data.get("start")
+        end = request.args.get('end') or data.get("end")
+        if start and end:
+            start_dt = _parse_datetime(start)
+            end_dt = _parse_datetime(end)
+            tasks = Task.query.filter(
+                Task.user_id == user_id,
+                Task.start_time >= start_dt,
+                Task.end_time <= end_dt
+            ).all()
+
+            return jsonify([{
+                'status': 'success',
+                'id': t.id,
+                'task_name': t.task_name,
+                'start_time': t.start_time.isoformat() if t.start_time else None,
+                'end_time': t.end_time.isoformat() if t.end_time else None,
+                'extendedProps': {'memo': t.memo}
+            } for t in tasks])
+
         # FullCalendarが理解できる形式に変換
         return jsonify([{
+            'status': 'success',
             'id': t.id,
             'task_name': t.task_name,
             'start_time': t.start_time.isoformat() if t.start_time else None,
