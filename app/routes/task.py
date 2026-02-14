@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, current_app
 from datetime import datetime
 from app import db
 from app.models.task import Task
@@ -18,7 +18,7 @@ def _parse_datetime(s):
             return None
 
 
-@task_bp.route("", methods=["POST","GET"])
+@task_bp.route("", methods=["POST", "GET"])
 def create_task():
     user_id = session.get("user_id")
     if not user_id:
@@ -128,3 +128,28 @@ def update(todo_id):
     db.session.commit()
     # Return JSON for API clients
     return jsonify({"status": "updated"})
+
+
+@task_bp.route('/debug', methods=['GET'])
+def debug_tasks():
+    """開発時のみ有効なデバッグエンドポイント。
+    app.debug が True のときのみ動作し、全ユーザーのタスクまたは user_id クエリで指定したユーザーのタスクを返す。
+    本番環境ではセキュリティ上無効化してください。
+    """
+    if not current_app.debug:
+        return jsonify({"error": "disabled"}), 403
+
+    uid = request.args.get('user_id')
+    if uid:
+        tasks = Task.query.filter_by(user_id=uid).all()
+    else:
+        tasks = Task.query.limit(200).all()
+
+    return jsonify([{
+        'id': t.id,
+        'task_name': t.task_name,
+        'start_time': t.start_time.isoformat() if t.start_time else None,
+        'end_time': t.end_time.isoformat() if t.end_time else None,
+        'memo': t.memo,
+        'category_id': t.category_id
+    } for t in tasks])

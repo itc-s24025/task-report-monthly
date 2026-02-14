@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, current_app
 from app import db
 from app.models.category import Category
 
@@ -53,3 +53,16 @@ def create_category():
     db.session.commit()
 
     return jsonify({"status": "created", "id": cat.id, "category_name": cat.category_name, "color": cat.color}), 201
+
+
+@category_bp.route('/debug', methods=['GET'])
+def debug_categories():
+    """開発用：認証不要でカテゴリ一覧を返す。本番では無効化推奨。"""
+    if not current_app.debug:
+        return jsonify({"error": "disabled"}), 403
+
+    categories = db.session.execute(db.select(Category).limit(200)).scalars().all()
+    return jsonify([
+        {"id": c.id, "category_name": c.category_name, "color": c.color, "user_id": c.user_id}
+        for c in categories
+    ])

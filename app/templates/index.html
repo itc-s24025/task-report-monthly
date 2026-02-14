@@ -429,6 +429,8 @@
         document.addEventListener('DOMContentLoaded', async function () {
             const calendarEl = document.getElementById('calendar');
             let selectedDate = new Date().toISOString().slice(0, 10);
+            // categories をキャッシュしてイベント生成で色などに使う
+            let categoriesCache = [];
 
             function isoDatePlusDays(dateStr, days) {
                 const d = new Date(dateStr + 'T00:00:00');
@@ -457,8 +459,15 @@
 
             async function populateCategories() {
                 const cats = await fetchCategories();
+                categoriesCache = cats || [];
                 const sel = document.getElementById('category-select');
                 sel.innerHTML = '<option value="">(カテゴリなし)</option>' + cats.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('');
+            }
+
+            function isDateOnly(s) {
+                if (!s) return false;
+                // ISO date-only は YYYY-MM-DD （T がなければ時刻なし）
+                return s.indexOf('T') === -1;
             }
 
             async function renderDayTasks(dateStr) {
@@ -480,9 +489,13 @@
                     const title = t.task_name || t.title || '(無題)';
                     const start_time = (t.start_time || t.start) ? (new Date(t.start_time || t.start)).toLocaleString() : '';
                     const memo = (t.extendedProps && t.extendedProps.memo) ? t.extendedProps.memo : (t.memo || '');
+                    // カテゴリ情報を取得
+                    const cat = categoriesCache.find(c => String(c.id) === String(t.category_id || (t.category && t.category.id)));
+                    const catName = cat ? cat.category_name : (t.category && t.category.category_name ? t.category.category_name : '');
+                    const catColor = cat ? cat.color : (t.category && t.category.color ? t.category.color : '');
                     return `<div style="padding:12px;border:1px solid #eee;border-radius:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;">
               <div>
-                <div style=\"font-weight:600;\">${title}</div>
+                <div style=\"font-weight:600;\">${title} ${catName ? '<span style=\\"font-size:12px;color:#666;margin-left:8px;\\"><small>['+catName+']</small></span>' : ''}</div>
                 <div style=\"font-size:12px;color:#666;\">${start_time}</div>
                 <div style=\"font-size:13px;color:#333;\">${memo}</div>
               </div>
@@ -523,14 +536,27 @@
                         })
                         .then(data => {
                             // API のフィールド名を FullCalendar に合わせてマップ
-                            const events = (data && data.length ? data : []).map(t => ({
-                                id: t.id,
-                                title: t.task_name || t.title || '(無題)',
-                                start: t.start_time || t.start || null,
-                                end: t.end_time || t.end || null,
-                                allDay: false,
-                                extendedProps: t.extendedProps || {memo: t.memo || ''}
-                            }));
+                            const events = (data && data.length ? data : []).map(t => {
+                                const startRaw = t.start_time || t.start || null;
+                                const endRaw = t.end_time || t.end || null;
+                                const cat = categoriesCache.find(c => String(c.id) === String(t.category_id || (t.category && t.category.id)));
+                                const color = cat ? cat.color : (t.category && t.category.color ? t.category.color : null);
+                                const allDay = isDateOnly(startRaw) && (!endRaw || isDateOnly(endRaw));
+                                return {
+                                    id: t.id,
+                                    title: t.task_name || t.title || '(無題)',
+                                    start: startRaw,
+                                    end: endRaw,
+                                    allDay: !!allDay,
+                                    backgroundColor: color || undefined,
+                                    extendedProps: Object.assign({}, t.extendedProps || {memo: t.memo || ''}, {
+                                        memo: (t.extendedProps && t.extendedProps.memo) ? t.extendedProps.memo : (t.memo || ''),
+                                        category_id: t.category_id || (t.category && t.category.id) || null,
+                                        category_name: cat ? cat.category_name : (t.category && t.category.category_name) || null,
+                                        color: color || null
+                                    })
+                                };
+                            });
                             successCallback(events);
                         })
                         .catch(err => failureCallback(err));
@@ -569,6 +595,10 @@
                 }
             });
             calendar.render();
+
+            // initCategories は既に await initCategories() で呼ばれているが、念のため
+            // カレンダー生成前に categoriesCache がセットされていることを期待する
+            //（index.html の実行フロー上は OK）
 
             // 新規登録フォーム処理（modal に対応）
             const openModalBtn = document.getElementById('open-new-task-modal');
@@ -677,11 +707,12 @@
             // populate select and buttons
             async function initCategories() {
                 const cats = await fetchCategories();
+                categoriesCache = cats || [];
                 populateHiddenSelect(cats);
                 renderCategoryButtons(cats);
-            }
+             }
 
-            await initCategories();
+             await initCategories();
 
             form.addEventListener('submit', async function (e) {
                 e.preventDefault();
