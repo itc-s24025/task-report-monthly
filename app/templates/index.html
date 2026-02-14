@@ -5,77 +5,316 @@
     <title>タスク管理システム</title>
 
     <style>
-      body {
-        font-family: sans-serif;
-        background-color: #f5f6f8;
-        margin: 0;
-        padding: 0;
-      }
+/* ===== 全体ダーク背景 ===== */
+body {
+  font-family: sans-serif;
+  background: radial-gradient(circle at 20% 20%, #0f2027, #0b0f14 60%);
+  color: #eaf6ff;
+  margin: 0;
+  padding: 0;
+}
 
-      .container {
-        max-width: 1000px;
-        margin: 40px auto;
-        background: #fff;
-        padding: 30px;
-        border-radius: 8px;
-      }
+/* ===== コンテナ（ガラス） ===== */
+.container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 30px;
+  border-radius: 20px;
 
-      /* システムタイトル */
-      .system-title {
-        text-align: center;
-        font-size: 26px;
-        font-weight: bold;
-        margin-bottom: 20px;
-      }
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 10px;
-        margin-bottom: 30px;
-      }
+  border: 1px solid rgba(0, 255, 255, 0.25);
 
-      .menu {
-        display: flex;
-        justify-content: space-between;
-        gap: 20px;
-        margin-bottom: 40px;
-      }
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.15),
+    inset 0 0 30px rgba(255, 255, 255, 0.03);
+}
 
-      .menu-item {
-        flex: 1;
-        text-align: center;
-        padding: 30px 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        cursor: pointer;
-        background-color: #fafafa;
-      }
+/* ===== タイトル ===== */
+.system-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #6ff;
+  text-shadow: 0 0 12px rgba(0,255,255,.6);
+  margin-bottom: 20px;
+}
 
-      .menu-item:hover {
-        background-color: #eaf0ff;
-      }
+/* ===== ヘッダー ===== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 10px;
+  margin-bottom: 30px;
+}
 
-      .content {
-        border-top: 1px solid #ddd;
-        padding-top: 20px;
-      }
+/* ===== メニュー ===== */
+.menu {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+}
 
-      .content-section {
-        display: none;
-      }
+.menu-item {
+  flex: 1;
+  text-align: center;
+  padding: 30px 10px;
+  border-radius: 16px;
+  cursor: pointer;
 
-      .content-section.active {
-        display: block;
-      }
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(10px);
 
-      /* calendar container */
-      #calendar {
-        max-width: 900px;
-        margin: 0 auto;
-      }
+  border: 1px solid rgba(0,255,255,0.2);
+
+  transition: .25s;
+}
+
+/* ホバー発光 */
+.menu-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 18px rgba(0,255,255,.45);
+  border-color: rgba(0,255,255,.6);
+}
+
+/* ===== コンテンツ横並び ===== */
+.content {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 20px;
+}
+
+/* ===== セクション制御 ===== */
+.content-section {
+  flex: 1;
+  display: none;
+}
+
+.content-section.active {
+  display: block;
+}
+
+/* 比率（参考UI風） */
+#task {
+  flex: 2;
+}
+
+#report {
+  flex: 1;
+}
+
+/* ===== カレンダー枠 ===== */
+#calendar {
+  max-width: 100%;
+  margin: 0 auto;
+
+  background: rgba(255,255,255,0.03);
+  padding: 14px;
+  border-radius: 16px;
+
+  border: 1px solid rgba(0,255,255,0.2);
+}
+
+/* ===== 日別タスクカード ===== */
+#day-task-list > div {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(0,255,255,0.2) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 14px !important;
+
+  box-shadow: 0 0 10px rgba(0,255,255,0.12);
+}
+
+/* ===== ボタン ===== */
+button {
+  background: linear-gradient(135deg,#00e5ff,#4facfe);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: .2s;
+  padding: 8px 12px;
+}
+
+button:hover {
+  box-shadow: 0 0 12px rgba(0,255,255,.6);
+}
+
+/* ===== レポートカード ===== */
+.card {
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 16px;
+
+  border: 1px solid rgba(0,255,255,0.2);
+  backdrop-filter: blur(10px);
+
+  box-shadow: 0 0 14px rgba(0,255,255,0.15);
+}
+
+/* ===== テーブル ===== */
+.table-area table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table-area th,
+.table-area td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.table-area th {
+  color: #6ff;
+}
+
+/* ===== 背景エフェクト ===== */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(
+      120deg,
+      transparent 40%,
+      rgba(0,255,255,.08),
+      transparent 60%
+    );
+  pointer-events: none; /* ← クリック阻害防止 */
+}
+
+/* ===== 今日ハイライト ===== */
+.fc-day-today {
+  background: rgba(0,255,255,0.12) !important;
+  box-shadow: inset 0 0 12px rgba(0,255,255,.5);
+}
+
+/* ===== モーダル ===== */
+#new-task-modal > div {
+  background: rgba(20,30,40,.85);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(0,255,255,.25);
+  box-shadow: 0 0 30px rgba(0,255,255,.25);
+}
+
+        /* ===============================
+   空タスク表示エリア（半透明ガラス）
+=============================== */
+
+/* 空状態コンテナ */
+.empty-task-box {
+  margin-top: 12px;
+  padding: 24px;
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px dashed rgba(0, 255, 255, 0.25);
+  text-align: center;
+
+  box-shadow:
+    inset 0 0 20px rgba(0, 255, 255, 0.05),
+    0 0 12px rgba(0, 255, 255, 0.08);
+}
+
+ .empty-task-title {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 10px;
+}
+
+.empty-task-add {
+  display: inline-block;
+  margin: 8px 0;
+  padding: 6px 14px;
+
+  border-radius: 999px;
+  font-size: 14px;
+
+  color: #6ff;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+
+  background: rgba(0, 255, 255, 0.05);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.empty-task-add:hover {
+  background: rgba(0, 255, 255, 0.18);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+.empty-task-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+        /* ===== 月次専用上書き ===== */
+
+#report .card {
+  padding: 22px;
+  border-radius: 16px;
+  text-align: center;
+
+  margin-bottom: 16px;
+}
+
+#report .card p {
+  margin-bottom: 8px;
+}
+
+#report .value {
+  font-size: 34px;
+  font-weight: bold;
+  color: #6ff;
+
+  margin-top: 4px;   /* ← 追加 */
+}
+
+#report table {
+  background: rgba(255,255,255,.05);
+}
+
+#report tr:hover {
+  background: rgba(0,255,255,.08);
+}
+
+  /* ===== レポート操作ボタン横並び ===== */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  margin-bottom: 16px;   /* ← これを追加 */
+}
+
+/* トグル内も横並び */
+.toggle {
+  display: flex;
+  gap: 8px;
+}
+
+/* 印刷ボタンだけ少し離す */
+.printBtn {
+  margin-left: 8px;
+}
+
     </style>
 
     <!-- FullCalendar CDN -->
@@ -107,39 +346,34 @@
         </div>
       </div>
 
-      <!-- コンテンツ -->
-      <div class="content">
-        <div id="task" class="content-section active">
-          <div id="calendar"></div>
+        <div class="content">
+          <!-- ===== タスク管理 ===== -->
+          <div id="task" class="content-section active">
+            <div id="calendar"></div>
 
-          <div style="max-width:900px;margin:8px auto;display:flex;justify-content:flex-end;">
-            <button id="open-new-task-modal" style="padding:8px 12px;background:#4a90e2;color:#fff;border-radius:6px;border:0;cursor:pointer;">＋ 新規タスク</button>
+            <!-- 空タスク表示 -->
+            <div class="empty-task-box">
+              <div class="empty-task-title">
+                該当タスクはありません
+              </div>
+
+              <div class="empty-task-add" id="open-new-task-modal">
+                ＋ タスクを追加
+              </div>
+
+              <div class="empty-task-desc">
+                右上の「＋ 新規タスク」ボタンからタスクを作成できます。
+              </div>
+            </div>
           </div>
 
-           <!-- 日付ごとのタスクリストおよび新規作成フォーム -->
-           <div id="day-panel" style="max-width:900px;margin:20px auto;padding:16px;border:1px solid #eee;border-radius:6px;background:#fafafa;">
-             <h3 id="day-panel-title"></h3>
--            <ul id="day-task-list" style="list-style:none;padding:0;margin:0 0 16px 0;"></ul>
-+            <div id="day-task-list" style="display:flex;flex-direction:column;gap:12px;margin:0 0 16px 0;"></div>
 
--            <h4>タスクを追加</h4>
--            <form id="new-task-form">
-+            <h4>タスクを追加</h4>
-+            <p>右上の「＋ 新規タスク」ボタンからタスクを作成できます。</p>
-          </div>
-         </div>
+  <!-- ===== 月次レポート ===== -->
+  <div id="report" class="content-section">
+    {% include "report.html" %}
+  </div>
 
-        <div id="today" class="content-section">
-          <h2>本日の一覧</h2>
-          <p>ここに本日のタスク一覧を表示します。</p>
-        </div>
-
-        <div id="report" class="content-section">
-          <h2>月次レポート</h2>
-          <p>ここに月次集計結果を表示します。</p>
-        </div>
-      </div>
-    </div>
+</div>
 
     <!-- New Task Modal -->
     <div id="new-task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:1000;">

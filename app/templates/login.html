@@ -1,9 +1,94 @@
 <!doctype html>
 <html lang="ja">
-  <body>
-    <h2>ログインしてください</h2>
-    <a href="{{ url_for('auth.login') }}">
-      <button>Googleでログイン</button>
-    </a>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Helvetica Neue', Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+        }
+
+        /* 中央のカード枠：内側の発光・曇りエフェクト */
+        .login-card {
+            background: rgba(0, 0, 0, 0.85); /* わずかに不透明度を上げ、内側の光を際立たせる */
+            padding: 60px 80px;
+            border-radius: 24px;
+            border: 2.5px solid #4fd1c5; /* 境界線を少し太くして発光の起点にする */
+
+            /* 内側の曇り発光のポイント:
+               inset 0 0 25px ... を追加することで、枠の内側の光を表現
+            */
+            box-shadow:
+                /* --- 内側の発光--- */
+                inset 0 0 20px rgba(79, 209, 197, 0.4),  /* 内側の縁をぼんやり光らせる */
+                inset 0 0 40px rgba(79, 209, 197, 0.1),  /* さらに深く広がる曇り */
+
+                /* --- 外側のネオン発光 --- */
+                0 0 20px rgba(79, 209, 197, 0.6),        /* 境界線直後の強い光 */
+                0 0 40px rgba(79, 209, 197, 0.3),        /* 中域の広がり */
+                0 0 70px rgba(79, 209, 197, 0.1);       /* 空間に溶け込む遠光 */
+
+            text-align: center;
+            min-width: 350px;
+            backdrop-filter: blur(10px); /* もし背景に何か置く場合は、ここでさらに曇らせ可能 */
+        }
+
+        /* 「ログインしてください」の文字も少し光らせる */
+        h1 {
+            color: #ffffff;
+            font-size: 26px;
+            margin-bottom: 40px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Googleログインボタン */
+        .google-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            color: #ffffff;
+            border: 1.5px solid rgba(255, 255, 255, 0.8);
+            padding: 12px 28px;
+            border-radius: 50px; /* 完全な丸み */
+            text-decoration: none;
+            font-size: 15px;
+            transition: all 0.4s ease;
+        }
+
+        /* ボタンホバー時：白く輝く */
+        .google-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .google-btn img {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+        }
+    </style>
+</head>
+<body class="login-body">
+<div class="login-container">
+    <div class="login-card">
+        <h1>ログインしてください</h1>
+        <a href="{{ url_for('auth.login') }}">
+            <button class="google-btn">Googleでログイン</button>
+        </a>
+    </div>
+</div>
+</body>
 </html>
