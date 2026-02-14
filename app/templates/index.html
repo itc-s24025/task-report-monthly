@@ -409,6 +409,16 @@ body::before {
           section.classList.remove("active");
         });
         document.getElementById(id).classList.add("active");
+
+        // 月次レポートセクションが表示された時にデータを読み込む
+        if (id === "report") {
+          // report.jsの関数を呼び出す
+          if (typeof loadCategory === 'function') {
+            loadCategory();
+            const now = new Date();
+            loadMonthly(now.getFullYear(), now.getMonth() + 1);
+          }
+        }
       }
 
       document.addEventListener('DOMContentLoaded', async function() {

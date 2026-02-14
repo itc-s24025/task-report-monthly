@@ -33,6 +33,9 @@ def create_app():
     from app.routes.task import task_bp
     app.register_blueprint(task_bp)
 
+    from app.routes.report import report_bp
+    app.register_blueprint(report_bp)
+
     Migrate(app, db)
 
     return app
