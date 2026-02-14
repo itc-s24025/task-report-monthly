@@ -7,7 +7,7 @@ from app import db
 report_bp = Blueprint('filter', __name__, url_prefix="/api/report")
 
 @report_bp.route("project", methods=["GET"])
-def category():
+def project():
     todo_list = (db.session.query(
         func.sum(Task.duration_seconds).label('total_duration'),
         func.sum(Task.end_time - Task.start_time).label('planned_duration')
