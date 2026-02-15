@@ -180,8 +180,8 @@ async function loadCategory() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${item.category_name}</td>
-          <td>${item.total_hour}</td>
-          <td>${item.progress}%</td>
+          <td>${isFinite(Number(item.total_hour)) ? Number(item.total_hour).toFixed(1) : '0.0'}</td>
+          <td>${isFinite(Number(item.progress)) ? Number(item.progress).toFixed(1) : '0.0'}%</td>
         `;
         tbody.appendChild(tr);
       });
@@ -222,12 +222,13 @@ async function loadMonthly(year, month) {
     const data = await res.json();
     console.log("月次データ:", data);
 
-    // HTMLへ反映
-    document.getElementById("totalHours").textContent =
-      data.total_hour || "0.0";
-
-    document.getElementById("workDays").textContent =
-      data.total_day || "0";
+    // HTMLへ反映（数値を常に小数点第一位で表示）
+    const totalHoursEl = document.getElementById("totalHours");
+    const workDaysEl = document.getElementById("workDays");
+    const th = (data && isFinite(Number(data.total_hour))) ? Number(data.total_hour).toFixed(1) : "0.0";
+    const wd = (data && (data.total_day !== undefined && data.total_day !== null)) ? String(data.total_day) : "0";
+    totalHoursEl.textContent = th;
+    workDaysEl.textContent = wd;
   } catch (error) {
     console.error("月次データの読み込みエラー:", error);
     document.getElementById("totalHours").textContent = "0.0";
@@ -262,8 +263,8 @@ async function loadProject() {
           <td>${item.task_name}</td>
           <td>${item.work_date}</td>
           <td>${item.ended_date}</td>
-          <td>${item.total_hour}</td>
-          <td>${item.progress}%</td>
+          <td>${isFinite(Number(item.total_hour)) ? Number(item.total_hour).toFixed(1) : '0.0'}</td>
+          <td>${isFinite(Number(item.progress)) ? Number(item.progress).toFixed(1) : '0.0'}%</td>
         `;
 
         tbody.appendChild(tr);
