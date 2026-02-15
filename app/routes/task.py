@@ -128,11 +128,35 @@ def update(todo_id):
     end_time = request.form.get("end_time")
     category_id = request.form.get("category_id")
     memo = request.form.get("memo")
-    todo.title = title
-    todo.start_time = start_time
-    todo.end_time = end_time
-    todo.category_id = category_id
-    todo.memo = memo
+    # apply updates with parsing
+    if title is not None:
+        todo.task_name = title
+    if start_time is not None:
+        parsed_start = _parse_datetime(start_time)
+        if parsed_start:
+            todo.start_time = parsed_start
+            todo.started_date = parsed_start.date()
+    if end_time is not None:
+        parsed_end = _parse_datetime(end_time)
+        if parsed_end:
+            todo.end_time = parsed_end
+            todo.ended_date = parsed_end.date()
+    if category_id is not None:
+        try:
+            todo.category_id = int(category_id)
+        except Exception:
+            todo.category_id = None
+    if memo is not None:
+        todo.memo = memo
+
+    # recompute duration_seconds if both datetimes present
+    try:
+        if todo.start_time and todo.end_time:
+            delta = todo.end_time - todo.start_time
+            seconds = int(delta.total_seconds()) if delta.total_seconds() > 0 else 0
+            todo.duration_seconds = seconds
+    except Exception:
+        pass
     db.session.commit()
     # Return JSON for API clients
     return jsonify({"status": "updated"})
