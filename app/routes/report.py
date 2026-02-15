@@ -120,24 +120,33 @@ def category():
 def monthly():
     # GETパラメータから取得
     year, month = _parse_year_month()
-    # 集計に使う基準日（開始日があればそれ、なければ作成日）
-    date_column = func.coalesce(Task.started_date, Task.created_date)
 
-    # 総作業時間（秒）を算出
+    # 1. フィルタリング用の基準（今月のデータを抽出するため）
+    filter_target = Task.started_date
+
+    # 2. 総作業時間（秒）を算出
     total_duration_q = (
         db.session.query(func.sum(Task.duration_seconds).label('total_duration'))
         .select_from(Task)
     )
-    total_duration_q = _apply_year_month_filter(total_duration_q, date_column, year, month)
+    total_duration_q = _apply_year_month_filter(total_duration_q, filter_target, year, month)
     total_duration_row = total_duration_q.first()
     total_seconds = total_duration_row.total_duration if total_duration_row and total_duration_row.total_duration else 0
 
-    # 総作業日数: 対象期間内の基準日(date_column)のユニーク日数を数える
+    # 3. 総作業日数（日をまたぐ期間の合計）を算出
+    # 各タスクの (終了日 - 開始日 + 1) を合計する
+    # func.coalesce は NULL だった場合に 0 や 1 を扱うための安全策
     total_day_q = (
-        db.session.query(func.count(func.distinct(date_column)).label('total_day'))
+        db.session.query(
+            func.sum(
+                Task.ended_date - Task.started_date + 1
+            ).label('total_day')
+        )
         .select_from(Task)
     )
-    total_day_q = _apply_year_month_filter(total_day_q, date_column, year, month)
+    # ここでも「今月のタスク」に絞り込むために filter_target を使用
+    total_day_q = _apply_year_month_filter(total_day_q, filter_target, year, month)
+
     total_day_row = total_day_q.first()
     total_day = total_day_row.total_day if total_day_row and total_day_row.total_day else 0
 
