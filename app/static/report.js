@@ -163,7 +163,7 @@ function switchTab(type) {
 async function loadCategory() {
   try {
     console.log("カテゴリ別データを読み込み中...");
-    const res = await fetch(`/api/report/category${buildYearMonthQuery()}`);
+    const res = await fetch(_withCacheBuster(`/api/report/category${buildYearMonthQuery()}`));
 
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -211,9 +211,7 @@ async function loadMonthly(year, month) {
 
     const query = params.toString();
     console.log(`月次データを読み込み中... (${targetYear}年${targetMonth}月)`);
-    const res = await fetch(
-      `/api/report/monthly${query ? `?${query}` : ""}`
-    );
+    const res = await fetch(_withCacheBuster(`/api/report/monthly${query ? `?${query}` : ""}`));
 
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -241,7 +239,7 @@ async function loadProject() {
   try {
     console.log("プロジェクト別データを読み込み中...");
 
-    const res = await fetch(`/api/report/project${buildYearMonthQuery()}`);
+    const res = await fetch(_withCacheBuster(`/api/report/project${buildYearMonthQuery()}`));
 
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -284,4 +282,9 @@ async function loadProject() {
     tbody.innerHTML =
       '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
   }
+}
+
+function _withCacheBuster(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}_=${Date.now()}`;
 }

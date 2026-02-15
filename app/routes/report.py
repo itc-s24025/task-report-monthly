@@ -113,22 +113,22 @@ def project():
 @report_bp.route("/category", methods=["GET"])
 def category():
     year, month = _parse_year_month()
-    # 日付フィルタは start_time の日付部分を使う（created_date ではなく start_time に統一）
+    # 日付フィルタは start_time の日付部分を使う
     date_column = func.date(Task.start_time)
 
-    # 実働 (actual) を started_time/ended_time の差で計算（秒）
+    # 実働(actual) を started_time/ended_time の差（秒）で計算
     duration_expr = case(
         ( (Task.started_time.isnot(None)) & (Task.ended_time.isnot(None)), func.extract('epoch', (Task.ended_time - Task.started_time)) ),
         else_=None
     )
 
-    # 予定 (planned) を start_time/end_time の差で計算（秒）
+    # 予定(planned) を start_time/end_time の差（秒）で計算
     planned_expr = case(
         ( (Task.start_time.isnot(None)) & (Task.end_time.isnot(None)), func.extract('epoch', (Task.end_time - Task.start_time)) ),
         else_=None
     )
 
-    # 1) カテゴリ × タスクごとの実働合計を取得（ended_date があるもののみを集計）
+    # カテゴリ×タスクごとの実働と予定を集計
     actual_q = (
         db.session.query(Task.category_id, Task.task_name, func.sum(duration_expr).label('actual'))
         .select_from(Task)
@@ -138,7 +138,6 @@ def category():
     actual_q = actual_q.group_by(Task.category_id, Task.task_name)
     actual_rows = actual_q.all()
 
-    # 2) カテゴリ × タスクごとの予定合計を取得
     planned_q = (
         db.session.query(Task.category_id, Task.task_name, func.sum(planned_expr).label('planned'))
         .select_from(Task)
@@ -147,39 +146,53 @@ def category():
     planned_q = planned_q.group_by(Task.category_id, Task.task_name)
     planned_rows = planned_q.all()
 
-    # 3) カテゴリ合計（実働）を計算
-    category_actual = {}
+    # マップ化とカテゴリ合計の計算
     task_actual_map = {}
+    category_actual = {}
     for r in actual_rows:
+        task_actual_map[(r.category_id, r.task_name)] = (r.actual or 0)
         category_actual[r.category_id] = category_actual.get(r.category_id, 0) + (r.actual or 0)
-        task_actual_map[(r.category_id, r.task_name)] = r.actual
 
-    planned_map = { (r.category_id, r.task_name): r.planned for r in planned_rows }
+    task_planned_map = { (r.category_id, r.task_name): (r.planned or 0) for r in planned_rows }
+    category_planned = {}
+    for r in planned_rows:
+        category_planned[r.category_id] = category_planned.get(r.category_id, 0) + (r.planned or 0)
 
-    # 4) カテゴリ一覧を取得し、カテゴリごとのタスク一覧を組み立てる
+    # カテゴリ一覧を取得してレスポンス生成
     categories = db.session.query(Category).order_by(Category.id).all()
     data = []
     for c in categories:
-        cat_total = category_actual.get(c.id, 0)
-        # collect task names that have either actual or planned in this category
+        cat_act = category_actual.get(c.id, 0)
+        cat_plan = category_planned.get(c.id, 0)
+        cat_progress = None
+        if cat_plan and cat_plan > 0:
+            cat_progress = float(round((cat_act / cat_plan) * 100, 1))
+
+        # 集計対象のタスク名を集める（planned or actual があるもの）
         names = set()
-        for (cat_id, tname) in list(task_actual_map.keys()) + list(planned_map.keys()):
+        for (cat_id, tname) in list(task_actual_map.keys()) + list(task_planned_map.keys()):
             if cat_id == c.id:
                 names.add(tname)
+
         tasks = []
         for name in sorted(names):
             actual = task_actual_map.get((c.id, name))
-            planned = planned_map.get((c.id, name))
+            planned = task_planned_map.get((c.id, name))
+            task_progress = None
+            if (actual is not None) and (planned and planned > 0):
+                task_progress = float(round((actual / planned) * 100, 1))
+
             tasks.append({
                 'task_name': name,
                 'total_hour': float(round(actual / 3600, 1)) if actual is not None else None,
-                'progress': float(round((actual / planned) * 100, 1)) if (actual is not None and planned and planned > 0) else None
+                'progress': task_progress
             })
 
         data.append({
             'category_id': c.id,
             'category_name': c.category_name or '未分類',
-            'total_hour': float(round(cat_total / 3600, 1)) if cat_total else None,
+            'total_hour': float(round(cat_act / 3600, 1)) if cat_act else None,
+            'progress': cat_progress,
             'tasks': tasks
         })
 
