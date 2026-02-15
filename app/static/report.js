@@ -285,3 +285,27 @@ async function loadProject() {
       '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
   }
 }
+
+/**
+ * 印刷準備：年月と印刷日時をヘッダーに設定してから印刷ダイアログを開く
+ */
+function preparePrint() {
+  const header = document.getElementById("reportHeader");
+  if (!header) {
+    window.print();
+    return;
+  }
+
+  const { year, month } = getSelectedYearMonth();
+  const now = new Date();
+  const printDate = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  // data属性に値を設定（CSSで表示）
+  header.setAttribute('data-period', `対象期間: ${year}年${month}月`);
+  header.setAttribute('data-print-date', printDate);
+
+  // 少し待ってから印刷ダイアログを開く
+  setTimeout(() => {
+    window.print();
+  }, 100);
+}

@@ -241,35 +241,172 @@ box-shadow: 0 0 10px var(--brand-shadow);
 /* ===== 印刷最適化 ===== */
 @media print {
 
+  /* ページ全体の背景と文字色を白黒に */
   body {
-    background: white;
-    color: black;
+    background: white !important;
+    color: black !important;
   }
 
+  /* 不要な要素を非表示 */
   .controls,
-  .printBtn {
-    display: none;
+  .printBtn,
+  .toggle {
+    display: none !important;
   }
 
+  /* ページのパディングを調整 */
   .page {
-    padding: 0;
+    padding: 20mm 15mm !important;
+    max-width: 100% !important;
   }
 
+  /* ヘッダー部分 */
+  .report-header {
+    margin-bottom: 20px !important;
+    border-bottom: 2px solid #333 !important;
+    padding-bottom: 15px !important;
+  }
+
+  .report-header h2 {
+    color: #000 !important;
+    text-shadow: none !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+    margin: 0 0 10px 0 !important;
+  }
+
+  /* 印刷時に年月を表示 */
+  .report-header::after {
+    content: attr(data-period);
+    display: block;
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+  }
+
+  /* サマリーカードを横並びで印刷 */
+  .summary {
+    display: flex !important;
+    justify-content: space-around !important;
+    gap: 20px !important;
+    margin: 20px 0 30px 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .card {
+    flex: 1 !important;
+    padding: 15px !important;
+    border: 2px solid #333 !important;
+    border-radius: 8px !important;
+    background: #f9f9f9 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .label {
+    font-size: 12px !important;
+    color: #666 !important;
+    opacity: 1 !important;
+    font-weight: bold !important;
+    margin-bottom: 8px !important;
+  }
+
+  .value {
+    font-size: 28px !important;
+    font-weight: bold !important;
+    color: #000 !important;
+    text-shadow: none !important;
+    margin-top: 5px !important;
+  }
+
+  /* テーブルエリア */
+  .table-area {
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
+  /* テーブルスタイル */
   table {
-    background: white;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background: white !important;
+    page-break-inside: auto !important;
+  }
+
+  /* テーブルヘッダー */
+  thead {
+    display: table-header-group !important;
   }
 
   th {
-    background: #eee;
-    color: black;
+    background: #333 !important;
+    color: white !important;
+    padding: 12px 8px !important;
+    text-align: left !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    border: 1px solid #333 !important;
   }
 
+  /* テーブル本体 */
+  tbody {
+    display: table-row-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  td {
+    padding: 10px 8px !important;
+    font-size: 11px !important;
+    color: #000 !important;
+    border: 1px solid #ccc !important;
+  }
+
+  /* ストライプ（見やすさ向上） */
   tr:nth-child(even) {
-    background: #f7f7f7;
+    background: #f5f5f5 !important;
   }
 
+  tr:nth-child(odd) {
+    background: white !important;
+  }
+
+  /* ホバー効果を無効化 */
+  tr:hover {
+    background: inherit !important;
+  }
+
+  /* 割合バーは印刷時に非表示または簡素化 */
+  .bar {
+    display: none !important;
+  }
+
+  /* ページ設定 */
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 15mm 10mm;
+  }
+
+  /* ページ番号を追加 */
+  @page {
+    @bottom-right {
+      content: "ページ " counter(page) " / " counter(pages);
+      font-size: 10px;
+      color: #666;
+    }
+  }
+
+  /* 印刷日時を追加 */
+  .report-header::before {
+    content: "印刷日時: " attr(data-print-date);
+    display: block;
+    font-size: 10px;
+    color: #999;
+    text-align: right;
+    margin-bottom: 10px;
   }
 }
