@@ -53,6 +53,27 @@ def project():
     total_query = _apply_year_month_filter(total_query, schedule_date, year, month)
     total_duration = total_query.scalar() or 0
 
+    # 各プロジェクト（task_name）ごとの合計時間も取得して、行ごとの進捗をプロジェクト内比率で計算する
+    # 実働（actual）での合計（これを表示の total_hour に使う）
+    task_total_q = (
+        db.session.query(Task.task_name, func.sum(duration_expr).label('task_total')).select_from(Task).filter(Task.ended_date.isnot(None))
+    )
+    task_total_q = _apply_year_month_filter(task_total_q, schedule_date, year, month)
+    task_total_q = task_total_q.group_by(Task.task_name)
+    task_totals = {row.task_name: (row.task_total or 0) for row in task_total_q.all()}
+
+    # 予定時間（planned）: start_time と end_time の差を秒で算出し、プロジェクトごとの予定合計を取得
+    planned_expr = case(
+        ((Task.start_time.isnot(None)) & (Task.end_time.isnot(None)), func.extract('epoch', (Task.end_time - Task.start_time))),
+        else_=None
+    )
+    planned_q = (
+        db.session.query(Task.task_name, func.sum(planned_expr).label('planned_total')).select_from(Task)
+    )
+    planned_q = _apply_year_month_filter(planned_q, schedule_date, year, month)
+    planned_q = planned_q.group_by(Task.task_name)
+    planned_totals = {row.task_name: (row.planned_total or 0) for row in planned_q.all()}
+
     # タスク名、予定日、終了日ごとに集計（秒）
     todo_query = (
         db.session.query(
@@ -79,10 +100,13 @@ def project():
                 # total_duration が None の場合（該当グループに開始/終了時刻の揃ったレコードがない）
                 # 表示しないため null を返す
                 "total_hour": float(round(todo.total_duration / 3600, 1)) if todo.total_duration is not None else None,
-                "progress": float(round(((todo.total_duration) / total_duration) * 100, 1)) if (todo.total_duration is not None and total_duration) else None
+                "progress": (
+                    float(round((todo.total_duration / planned_totals.get(todo.task_name)) * 100, 1))
+                    if (todo.total_duration is not None and planned_totals.get(todo.task_name)) else None
+                )
             }
             for todo in todo_list
-        ]
+         ]
     })
 
 
@@ -92,47 +116,74 @@ def category():
     # 日付フィルタは start_time の日付部分を使う（created_date ではなく start_time に統一）
     date_column = func.date(Task.start_time)
 
-    # duration を started/ended で計算（秒）を優先し、ただし started/ended が両方存在しない場合は NULL
+    # 実働 (actual) を started_time/ended_time の差で計算（秒）
     duration_expr = case(
         ( (Task.started_time.isnot(None)) & (Task.ended_time.isnot(None)), func.extract('epoch', (Task.ended_time - Task.started_time)) ),
         else_=None
     )
 
-    # 全体合計（ended_date が存在するレコードのみ）
-    total_all_q = db.session.query(func.sum(duration_expr)).select_from(Task).filter(Task.ended_date.isnot(None))
-    total_all_q = _apply_year_month_filter(total_all_q, date_column, year, month)
-    total_all = total_all_q.scalar() or 0
+    # 予定 (planned) を start_time/end_time の差で計算（秒）
+    planned_expr = case(
+        ( (Task.start_time.isnot(None)) & (Task.end_time.isnot(None)), func.extract('epoch', (Task.end_time - Task.start_time)) ),
+        else_=None
+    )
 
-    # カテゴリ別の合計を取得（Task を起点に明示的に select_from）
-    todo_query = (
-        db.session.query(
-            Category.id.label('category_id'),
-            Category.category_name,
-            func.sum(duration_expr).label('total_duration')
-        )
+    # 1) カテゴリ × タスクごとの実働合計を取得（ended_date があるもののみを集計）
+    actual_q = (
+        db.session.query(Task.category_id, Task.task_name, func.sum(duration_expr).label('actual'))
         .select_from(Task)
-        .outerjoin(Category, Task.category_id == Category.id)
+        .filter(Task.ended_date.isnot(None))
     )
-    # 表示は ended_date が無くても含める（終了日セルは空にする）
-    todo_query = _apply_year_month_filter(todo_query, date_column, year, month)
-    todo_list = (
-        todo_query
-        .group_by(Category.id, Category.category_name)
-        .order_by(func.sum(duration_expr).desc())
-        .all()
-    )
+    actual_q = _apply_year_month_filter(actual_q, date_column, year, month)
+    actual_q = actual_q.group_by(Task.category_id, Task.task_name)
+    actual_rows = actual_q.all()
 
-    return jsonify({
-        "data": [
-            {
-                "category_id": todo.category_id,
-                "category_name": todo.category_name if todo.category_name else "未分類",
-                "total_hour": float(round((todo.total_duration) / 3600, 1)) if todo.total_duration is not None else None,
-                "progress": float(round(((todo.total_duration) / total_all) * 100, 1)) if (todo.total_duration is not None and total_all) else None
-            }
-            for todo in todo_list
-        ]
-    })
+    # 2) カテゴリ × タスクごとの予定合計を取得
+    planned_q = (
+        db.session.query(Task.category_id, Task.task_name, func.sum(planned_expr).label('planned'))
+        .select_from(Task)
+    )
+    planned_q = _apply_year_month_filter(planned_q, date_column, year, month)
+    planned_q = planned_q.group_by(Task.category_id, Task.task_name)
+    planned_rows = planned_q.all()
+
+    # 3) カテゴリ合計（実働）を計算
+    category_actual = {}
+    task_actual_map = {}
+    for r in actual_rows:
+        category_actual[r.category_id] = category_actual.get(r.category_id, 0) + (r.actual or 0)
+        task_actual_map[(r.category_id, r.task_name)] = r.actual
+
+    planned_map = { (r.category_id, r.task_name): r.planned for r in planned_rows }
+
+    # 4) カテゴリ一覧を取得し、カテゴリごとのタスク一覧を組み立てる
+    categories = db.session.query(Category).order_by(Category.id).all()
+    data = []
+    for c in categories:
+        cat_total = category_actual.get(c.id, 0)
+        # collect task names that have either actual or planned in this category
+        names = set()
+        for (cat_id, tname) in list(task_actual_map.keys()) + list(planned_map.keys()):
+            if cat_id == c.id:
+                names.add(tname)
+        tasks = []
+        for name in sorted(names):
+            actual = task_actual_map.get((c.id, name))
+            planned = planned_map.get((c.id, name))
+            tasks.append({
+                'task_name': name,
+                'total_hour': float(round(actual / 3600, 1)) if actual is not None else None,
+                'progress': float(round((actual / planned) * 100, 1)) if (actual is not None and planned and planned > 0) else None
+            })
+
+        data.append({
+            'category_id': c.id,
+            'category_name': c.category_name or '未分類',
+            'total_hour': float(round(cat_total / 3600, 1)) if cat_total else None,
+            'tasks': tasks
+        })
+
+    return jsonify({'data': data})
 
 
 @report_bp.route("/monthly", methods=["GET"])
