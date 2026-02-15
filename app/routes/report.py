@@ -120,17 +120,28 @@ def category():
 def monthly():
     # GETパラメータから取得
     year, month = _parse_year_month()
+    # 集計に使う基準日（開始日があればそれ、なければ作成日）
     date_column = func.coalesce(Task.started_date, Task.created_date)
 
-    # 月次集計
-    month_query = db.session.query(
-        func.sum(Task.duration_seconds).label('total_duration'),
-        func.count(Task.id).label('total_day')
+    # 総作業時間（秒）を算出
+    total_duration_q = (
+        db.session.query(func.sum(Task.duration_seconds).label('total_duration'))
+        .select_from(Task)
     )
-    month_query = _apply_year_month_filter(month_query, date_column, year, month)
-    month_todo = month_query.first()
+    total_duration_q = _apply_year_month_filter(total_duration_q, date_column, year, month)
+    total_duration_row = total_duration_q.first()
+    total_seconds = total_duration_row.total_duration if total_duration_row and total_duration_row.total_duration else 0
+
+    # 総作業日数: 対象期間内の基準日(date_column)のユニーク日数を数える
+    total_day_q = (
+        db.session.query(func.count(func.distinct(date_column)).label('total_day'))
+        .select_from(Task)
+    )
+    total_day_q = _apply_year_month_filter(total_day_q, date_column, year, month)
+    total_day_row = total_day_q.first()
+    total_day = total_day_row.total_day if total_day_row and total_day_row.total_day else 0
 
     return jsonify({
-        "total_hour": round((month_todo.total_duration or 0) / 3600, 1) if month_todo else 0,
-        "total_day": month_todo.total_day if month_todo else 0
+        "total_hour": round(total_seconds / 3600, 1) if total_seconds else 0,
+        "total_day": int(total_day)
     })
