@@ -10,6 +10,13 @@
   --control-bg: rgba(255, 255, 255, 0.08);
   --control-bg-open: #1a1a1a;
   
+  /* コントロール/セレクト用の文字色・背景 */
+  --control-foreground: #eaf6ff;         
+  --modal-select-bg: rgba(20,30,38,0.96);/* セレクト本体の暗い背景 */
+  --modal-option-bg: rgba(14,22,28,0.98);/* ドロップダウン内 option の背景 */
+  --form-text: #eaf6ff;                  /* 再利用 */
+
+  
   /* 文字色 */
   --text-main: #6ff;
   --text-muted: rgba(255, 255, 255, 0.7);
@@ -36,6 +43,55 @@
   flex-direction: column;
   gap: 16px;
   margin-bottom: 20px;
+}
+
+#new-task-modal .modal-inner h3,
+#taskModal .modal-inner h3 {
+  color: #fff !important;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+}
+
+.modal-inner textarea {
+  background: rgba(74,144,226,0.08) !important; /* 暗めのグレー青系 */
+  color: #eaf6ff !important;                  /* 明るい文字色 */
+  border: 1px solid rgba(74,144,226,0.12) !important;
+  box-shadow: none !important;
+}
+
+/* 必要なら input/select も同様に変える */
+.modal-inner input,
+.modal-inner select {
+  background: var(--modal-select-bg) !important;
+  color: var(--form-text) !important;
+  border: 1px solid rgba(74,144,226,0.08) !important;
+  padding: 8px 36px 8px 10px !important; /* 右に余白を作る */
+  border-radius: 6px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  box-shadow: none !important;
+}
+
+
+
+/* 下部のキャンセルボタン */
+.modal-inner button#cancel-new-task {
+  background: rgba(255,255,255,0.06) !important;
+  color: #eaf6ff !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+/* 下部の作成ボタン（強調色） */
+.modal-inner button[type="submit"] {
+  background: linear-gradient(135deg,#1f6fd6,#4facfe) !important;
+  color: #fff !important;
+  border: 1px solid rgba(11,102,208,0.18) !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 6px 18px rgba(11,102,208,0.06) !important;
 }
 
 .report-header h2 {
