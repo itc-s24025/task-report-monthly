@@ -87,19 +87,25 @@ def category():
     year, month = _parse_year_month()
     date_column = func.coalesce(Task.started_date, Task.created_date)
 
-    # カテゴリ別に集計（Categoryテーブルと結合）
+    # 対象期間の全体合計（秒）を先に取得
+    total_all_q = db.session.query(func.sum(Task.duration_seconds)).select_from(Task)
+    total_all_q = _apply_year_month_filter(total_all_q, date_column, year, month)
+    total_all = total_all_q.scalar() or 0
+
+    # カテゴリ別の合計を取得（Task を起点に明示的に select_from）
     todo_query = (
         db.session.query(
+            Category.id.label('category_id'),
             Category.category_name,
-            func.sum(Task.duration_seconds).label('total_duration'),
-            func.sum(Task.end_time - Task.start_time).label('planned_duration')
+            func.sum(Task.duration_seconds).label('total_duration')
         )
+        .select_from(Task)
         .outerjoin(Category, Task.category_id == Category.id)
     )
     todo_query = _apply_year_month_filter(todo_query, date_column, year, month)
     todo_list = (
         todo_query
-        .group_by(Task.category_id, Category.category_name)
+        .group_by(Category.id, Category.category_name)
         .order_by(func.sum(Task.duration_seconds).desc())
         .all()
     )
@@ -107,9 +113,10 @@ def category():
     return jsonify({
         "data": [
             {
+                "category_id": todo.category_id,
                 "category_name": todo.category_name if todo.category_name else "未分類",
                 "total_hour": round((todo.total_duration or 0) / 3600, 1),
-                "progress": round((todo.planned_duration.total_seconds() / todo.total_duration) * 100, 1) if todo.planned_duration and todo.total_duration else 0
+                "progress": round(((todo.total_duration or 0) / total_all) * 100, 1) if total_all else 0
             }
             for todo in todo_list
         ]
