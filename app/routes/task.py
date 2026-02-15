@@ -74,35 +74,6 @@ def create_task():
         task.category_id = data.get("category_id")
         task.memo = data.get("memo", "")
 
-        # optional: created_date (keep backward compatibility)
-        if data.get("created_date"):
-            try:
-                task.created_date = datetime.strptime(data["created_date"], "%Y-%m-%d").date()
-            except Exception:
-                pass
-
-        # calendar fields
-        start = _parse_datetime(data.get("start") or data.get("start_time"))
-        end = _parse_datetime(data.get("end") or data.get("end_time"))
-        if start:
-            task.start_time = start
-        if end:
-            task.end_time = end
-
-        # duration and date fields: compute if both start and end are present
-        try:
-            if task.start_time and task.end_time:
-                delta = task.end_time - task.start_time
-                # prevent negative durations
-                seconds = int(delta.total_seconds()) if delta.total_seconds() > 0 else 0
-                task.duration_seconds = seconds
-                # started_date/ended_date are dates (not datetimes)
-                task.started_date = task.start_time.date()
-                task.ended_date = task.end_time.date()
-        except Exception:
-            # keep defaults if computation fails
-            pass
-
         db.session.add(task)
         db.session.commit()
 
