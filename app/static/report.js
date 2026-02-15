@@ -180,8 +180,8 @@ async function loadCategory() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${item.category_name}</td>
-          <td>${isFinite(Number(item.total_hour)) ? Number(item.total_hour).toFixed(1) : '0.0'}</td>
-          <td>${isFinite(Number(item.progress)) ? Number(item.progress).toFixed(1) : '0.0'}%</td>
+          <td>${(item.total_hour !== null && item.total_hour !== undefined && isFinite(Number(item.total_hour))) ? Number(item.total_hour).toFixed(1) : ''}</td>
+          <td>${(item.progress !== null && item.progress !== undefined && isFinite(Number(item.progress))) ? Number(item.progress).toFixed(1) + '%' : ''}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -225,7 +225,7 @@ async function loadMonthly(year, month) {
     // HTMLへ反映（数値を常に小数点第一位で表示）
     const totalHoursEl = document.getElementById("totalHours");
     const workDaysEl = document.getElementById("workDays");
-    const th = (data && isFinite(Number(data.total_hour))) ? Number(data.total_hour).toFixed(1) : "0.0";
+    const th = (data && data.total_hour !== null && data.total_hour !== undefined && isFinite(Number(data.total_hour))) ? Number(data.total_hour).toFixed(1) : "";
     const wd = (data && (data.total_day !== undefined && data.total_day !== null)) ? String(data.total_day) : "0";
     totalHoursEl.textContent = th;
     workDaysEl.textContent = wd;
@@ -263,8 +263,8 @@ async function loadProject() {
           <td>${item.task_name}</td>
           <td>${item.work_date}</td>
           <td>${item.ended_date}</td>
-          <td>${isFinite(Number(item.total_hour)) ? Number(item.total_hour).toFixed(1) : '0.0'}</td>
-          <td>${isFinite(Number(item.progress)) ? Number(item.progress).toFixed(1) : '0.0'}%</td>
+          <td>${(item.total_hour !== null && item.total_hour !== undefined && isFinite(Number(item.total_hour))) ? Number(item.total_hour).toFixed(1) : ''}</td>
+          <td>${(item.progress !== null && item.progress !== undefined && isFinite(Number(item.progress))) ? Number(item.progress).toFixed(1) + '%' : ''}</td>
         `;
 
         tbody.appendChild(tr);
