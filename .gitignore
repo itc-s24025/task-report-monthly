@@ -222,6 +222,7 @@ pnpm-lock.yaml
 .next/
 out/
 dist/
+.idea/*
 
 # DB migrations file
 migrations
