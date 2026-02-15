@@ -49,6 +49,10 @@ def create_task():
                 'task_name': t.task_name,
                 'start_time': t.start_time.isoformat() if t.start_time else None,
                 'end_time': t.end_time.isoformat() if t.end_time else None,
+                'category_id': t.category_id,
+                'category_name': t.category.category_name if t.category else None,
+                'memo': t.memo,
+                'duration_seconds': t.duration_seconds or 0,
                 'extendedProps': {'memo': t.memo}
             } for t in tasks])
 
@@ -59,6 +63,10 @@ def create_task():
             'task_name': t.task_name,
             'start_time': t.start_time.isoformat() if t.start_time else None,
             'end_time': t.end_time.isoformat() if t.end_time else None,
+            'category_id': t.category_id,
+            'category_name': t.category.category_name if t.category else None,
+            'memo': t.memo,
+            'duration_seconds': t.duration_seconds or 0,
             'extendedProps': {'memo': t.memo}
         } for t in tasks])
 

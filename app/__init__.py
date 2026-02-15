@@ -35,8 +35,10 @@ def create_app():
 
     from app.routes.report import report_bp
     app.register_blueprint(report_bp)
+    
+    from app.routes.time import time_bp
+    app.register_blueprint(time_bp, url_prefix='/api/time')
 
     Migrate(app, db)
 
     return app
-

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>計測 - 時間記録</title>
+    <!-- CSS読み込み -->
+    <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='style.css') }}"
+    />
+</head>
+<body>
+
+<div class="page">
+    <header class="timer-header">
+        <h2>計測</h2>
+    </header>
+
+    <!-- ===== 選択したタスクの詳細 ===== -->
+    <section class="detail">
+        <div class="card">
+            <div class="label">
+                <p>作業中のタスク</p>
+                <h2 id="selectedTaskName">タスクを選択してください</h2>
+                <p id="selectedTaskDate">-</p>
+            </div>
+
+            <div class="timer">
+                <div id="display" style="font-size: 2rem; font-weight: bold;">00:00:00</div>
+                <button id="startTimer">開始</button>
+                <button id="stopTimer">一時停止</button>
+                <button id="finishTimer">終了</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 本日のタスク一覧 ===== -->
+    <section class="table-area">
+        <h2>本日のタスク</h2>
+        <table id="tasksTable">
+            <thead>
+            <tr>
+                <th>タスク名</th>
+                <th id="groupHeader">カテゴリ名</th>
+                <th>予定日</th>
+                <th>実績</th>
+                <th>メモ</th>
+            </tr>
+            </thead>
+
+            <tbody id="tasksBody"></tbody>
+        </table>
+    </section>
+
+</div>
+
+
+<!-- JS読み込み（body最後推奨） -->
+<script src="{{ url_for('static', filename='timer.js') }}"></script>
+
+</body>
+</html>
