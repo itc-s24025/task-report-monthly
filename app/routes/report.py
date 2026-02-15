@@ -38,8 +38,8 @@ def _apply_year_month_filter(query, date_column, year, month):
 @report_bp.route("/project", methods=["GET"])
 def project():
     year, month = _parse_year_month()
-    # 期間フィルタに使う日付（started_time の日付、なければ created_date）
-    schedule_date = func.coalesce(func.date(Task.started_time), Task.created_date)
+    # 期間フィルタに使う日付：start_time の日付部分のみを使う
+    schedule_date = func.date(Task.start_time)
 
     # 作業時間は started_time/ended_time が両方ある場合にのみ (ended_time - started_time) を計算する
     # それ以外は NULL として扱う（表示しない要件に対応）
@@ -48,8 +48,8 @@ def project():
         else_=None
     )
 
-    # 全体の合計時間（秒）を計算
-    total_query = db.session.query(func.sum(duration_expr))
+    # 全体の合計時間（秒）を計算（ended_date が無いレコードは除外）
+    total_query = db.session.query(func.sum(duration_expr)).select_from(Task).filter(Task.ended_date.isnot(None))
     total_query = _apply_year_month_filter(total_query, schedule_date, year, month)
     total_duration = total_query.scalar() or 0
 
@@ -89,8 +89,8 @@ def project():
 @report_bp.route("/category", methods=["GET"])
 def category():
     year, month = _parse_year_month()
-    # 日付フィルタは started_time の日付を優先
-    date_column = func.coalesce(func.date(Task.started_time), Task.created_date)
+    # 日付フィルタは start_time の日付部分を使う（created_date ではなく start_time に統一）
+    date_column = func.date(Task.start_time)
 
     # duration を started/ended で計算（秒）を優先し、ただし started/ended が両方存在しない場合は NULL
     duration_expr = case(
@@ -98,8 +98,8 @@ def category():
         else_=None
     )
 
-    # 対象期間の全体合計（秒）を先に取得
-    total_all_q = db.session.query(func.sum(duration_expr)).select_from(Task)
+    # 全体合計（ended_date が存在するレコードのみ）
+    total_all_q = db.session.query(func.sum(duration_expr)).select_from(Task).filter(Task.ended_date.isnot(None))
     total_all_q = _apply_year_month_filter(total_all_q, date_column, year, month)
     total_all = total_all_q.scalar() or 0
 
@@ -113,6 +113,7 @@ def category():
         .select_from(Task)
         .outerjoin(Category, Task.category_id == Category.id)
     )
+    # 表示は ended_date が無くても含める（終了日セルは空にする）
     todo_query = _apply_year_month_filter(todo_query, date_column, year, month)
     todo_list = (
         todo_query
@@ -139,13 +140,12 @@ def monthly():
     # GETパラメータから取得
     year, month = _parse_year_month()
 
-    # 1. フィルタリング用の基準（今月のデータを抽出するため）
+    # 1. フィルタリング用の基準（started_date の date カラムを基準にする）
     filter_target = Task.started_date
 
-    # 2. 総作業時間（秒）を算出
+    # 総作業時間（秒）を算出（ended_date があるもののみ）
     total_duration_q = (
-        db.session.query(func.sum(Task.duration_seconds).label('total_duration'))
-        .select_from(Task)
+        db.session.query(func.sum(Task.duration_seconds).label('total_duration')).select_from(Task).filter(Task.ended_date.isnot(None))
     )
     total_duration_q = _apply_year_month_filter(total_duration_q, filter_target, year, month)
     total_duration_row = total_duration_q.first()
