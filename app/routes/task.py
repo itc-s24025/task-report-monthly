@@ -49,6 +49,7 @@ def create_task():
                 'task_name': t.task_name,
                 'start_time': t.start_time.isoformat() if t.start_time else None,
                 'end_time': t.end_time.isoformat() if t.end_time else None,
+                'category_id': t.category_id,
                 'extendedProps': {'memo': t.memo}
             } for t in tasks])
 
