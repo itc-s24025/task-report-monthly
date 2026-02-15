@@ -1,3 +1,28 @@
+:root {
+  /* メインカラー（水色・ネオン系） */
+  --brand-color: #6ff;
+  --brand-gradient: linear-gradient(135deg, #00e5ff, #4facfe);
+  --brand-shadow: rgba(0, 255, 255, 0.5);
+  
+  /* 背景色・パネル色 */
+  --page-bg: #0b0f14; /* 必要に応じて背景色も定義 */
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --control-bg: rgba(255, 255, 255, 0.08);
+  --control-bg-open: #1a1a1a;
+  
+  /* 文字色 */
+  --text-main: #6ff;
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --text-dark: #000;
+  
+  /* 枠線・アクセント */
+  --border-color: rgba(0, 255, 255, 0.25);
+  --border-light: rgba(255, 255, 255, 0.08);
+  
+  /* 成功（印刷ボタンなど） */
+  --success-gradient: linear-gradient(135deg, #22c55e, #4ade80);
+}
+
 /* ===== 月次ページ全体 ===== */
 .page {
   max-width: 1100px;
@@ -15,8 +40,8 @@
 
 .report-header h2 {
   font-size: 26px;
-  color: #6ff;
-  text-shadow: 0 0 10px rgba(0,255,255,.5);
+  color: var(--brand-color);
+text-shadow: 0 0 10px var(--brand-shadow);
 }
 
 /* ===== コントロール ===== */
@@ -30,22 +55,21 @@ select,
 button {
   padding: 8px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(0,255,255,.3);
-  background: rgba(255,255,255,.05);
-  color: white;
+  border: 1px solid var(--border-color);
+  background: var(--control-bg);
+  color: var(--control-foreground);
 }
 
-/* トグル */
-.toggle button {
-  background: rgba(255,255,255,.08);
-  cursor: pointer;
-  transition: .2s;
+/* ドロップダウン内（option）の背景色と文字色 */
+.controls select option {
+  background-color: var(--control-bg-open);
+  color: var(--control-foreground);
 }
 
+/* トグルボタンのactive */
 .toggle .active {
-  background: linear-gradient(135deg,#00e5ff,#4facfe);
-  color: black;
-  font-weight: bold;
+  background: var(--brand-gradient);
+  color: var(--text-dark);
 }
 
 /* 印刷 */
@@ -68,27 +92,26 @@ button {
   border-radius: 16px;
   text-align: center;
 
-  background: rgba(255,255,255,.05);
+  background: var(--card-bg);
   backdrop-filter: blur(12px);
 
-  border: 1px solid rgba(0,255,255,.25);
+  border: 1px solid var(--border-color);
 
-  box-shadow:
-    0 0 14px rgba(0,255,255,.15),
-    inset 0 0 20px rgba(255,255,255,.03);
+  box-shadow: 0 0 14px rgba(0, 255, 255, 0.15);
 }
 
 .label {
   font-size: 14px;
   opacity: .7;
+  color: var(--text-muted);
 }
 
 .value {
   font-size: 34px;
   font-weight: bold;
   margin-top: 6px;
-  color: #6ff;
-  text-shadow: 0 0 10px rgba(0,255,255,.4);
+  color: var(--brand-color);
+  text-shadow: 0 0 10px var(--brand-shadow);
 }
 
 /* ===== テーブルエリア ===== */
@@ -107,7 +130,8 @@ table {
 
 /* ヘッダー */
 th {
-  background: rgba(0,255,255,.15);
+  background: var(--control-bg);
+  color: var(--brand-color);
   padding: 14px;
   text-align: left;
   font-size: 14px;
@@ -117,6 +141,7 @@ th {
 td {
   padding: 14px;
   font-size: 14px;
+  color: var(--text-muted);
 }
 
 /* ストライプ */
@@ -131,13 +156,14 @@ tr:hover {
 
 /* 区切り */
 tr:not(:last-child) {
-  border-bottom: 1px solid rgba(255,255,255,.08);
+box-shadow: 0 0 10px var(--brand-shadow);
 }
 
 /* ===== 割合バー ===== */
 .bar {
   height: 8px;
-  background: rgba(255,255,255,.15);
+  background: var(--brand-gradient);
+  box-shadow: 0 0 10px var(--brand-shadow);
   border-radius: 999px;
   margin-top: 6px;
   overflow: hidden;
