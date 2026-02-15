@@ -174,6 +174,10 @@ def category():
             if cat_id == c.id:
                 names.add(tname)
 
+        # 選択月に actual/planned が一切ないカテゴリは表示しない
+        if (not names) and (not cat_act) and (not cat_plan):
+            continue
+
         tasks = []
         for name in sorted(names):
             actual = task_actual_map.get((c.id, name))
