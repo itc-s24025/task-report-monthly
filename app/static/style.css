@@ -48,7 +48,8 @@
 #new-task-modal .modal-inner h3,
 #taskModal .modal-inner h3 {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+  /* remove glow */
+  text-shadow: none !important;
 }
 
 .modal-inner textarea {
@@ -97,7 +98,8 @@
 .report-header h2 {
   font-size: 26px;
   color: var(--brand-color);
-text-shadow: 0 0 10px var(--brand-shadow);
+  /* remove glow */
+  text-shadow: none;
 }
 
 /* ===== コントロール ===== */
@@ -151,9 +153,9 @@ button {
   background: var(--card-bg);
   backdrop-filter: blur(12px);
 
-  border: 1px solid var(--border-color);
-
-  box-shadow: 0 0 14px rgba(0, 255, 255, 0.15);
+  /* Remove glow and use solid black border for clear, non-glowing outline */
+  border: 1px solid #000;
+  box-shadow: none;
 }
 
 .label {
@@ -167,7 +169,8 @@ button {
   font-weight: bold;
   margin-top: 6px;
   color: var(--brand-color);
-  text-shadow: 0 0 10px var(--brand-shadow);
+  /* remove glow */
+  text-shadow: none;
 }
 
 /* ===== テーブルエリア ===== */
@@ -210,9 +213,12 @@ tr:hover {
   background: rgba(0,255,255,.08);
 }
 
-/* 区切り */
-tr:not(:last-child) {
-box-shadow: 0 0 10px var(--brand-shadow);
+/* 区切り（発光をやめ、黒の境界線に変更） */
+tr:not(:last-child) td {
+  /* remove glow */
+  box-shadow: none;
+  /* use solid black line between rows */
+  border-bottom: 1px solid #000;
 }
 
 /* ===== 割合バー ===== */
@@ -240,32 +246,76 @@ box-shadow: 0 0 10px var(--brand-shadow);
 
 /* ===== 印刷最適化 ===== */
 @media print {
+  /* Hide everything by default, then show only the monthly report (#report) */
+  /* This ensures printing is limited to the report section */
+  body * {
+    visibility: hidden;
+  }
 
-  body {
+  /* Make report and its contents visible */
+  #report, #report * {
+    visibility: visible;
+  }
+
+  /* Position the report at top-left for printing */
+  #report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     background: white;
     color: black;
   }
 
-  .controls,
-  .printBtn {
+  /* Hide controls/print button if they appear inside report area */
+  #report .controls,
+  #report .printBtn {
     display: none;
   }
 
-  .page {
+  /* Adjust padding and table appearance inside report */
+  #report .page {
     padding: 0;
+    /* add top padding to avoid overlap with fixed print header */
+    padding-top: 20mm;
   }
 
-  table {
+  #report table {
     background: white;
   }
 
-  th {
+  #report th {
     background: #eee;
     color: black;
   }
 
-  tr:nth-child(even) {
+  #report tr:nth-child(even) {
     background: #f7f7f7;
+  }
+
+  /* Print header/footer styling */
+  .print-header, .print-footer {
+    position: fixed;
+    left: 10mm;
+    right: 10mm;
+    width: calc(100% - 20mm);
+    color: black;
+    background: white;
+    visibility: visible;
+  }
+  .print-header { top: 5mm; }
+  .print-footer { bottom: 5mm; }
+  .print-header-inner, .print-footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  /* Ensure printed text is black on white */
+  #report, #report * {
+    background: white !important;
+    color: black !important;
   }
 
   @page {
