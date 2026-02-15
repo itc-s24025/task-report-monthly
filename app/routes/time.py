@@ -10,6 +10,7 @@ def start(todo_id):
     todo = Task.query.get(todo_id)
     if todo is None:
         return "Todo not found", 404
+    todo.started_date = datetime.now().date()
     todo.started_by_time = datetime.now()
     db.session.commit()
     return redirect(url_for("timer"))
@@ -17,13 +18,15 @@ def start(todo_id):
 @time_bp.route("/<int:todo_id>/end", methods=["POST"])
 def end(todo_id):
     todo = Task.query.get(todo_id)
-    now = datetime.now()
+    now_time = datetime.now()
+    now_date = now_time.date()
     if todo is None:
         return "Todo not found", 404
     if todo.started_by_time:
-        todo.ended_by_time = now
-        duration = (now - todo.started_by_time).total_seconds()
+        todo.ended_by_time = now_time
+        duration = (now_time - todo.started_by_time).total_seconds()
         todo.duration_seconds = int(duration)
+        todo.ended_date = now_date
         db.session.commit()
     else:
         return "Task has not been started", 400
