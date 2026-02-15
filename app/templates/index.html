@@ -407,350 +407,395 @@
             </form>
         </div>
     </div>
+    <!-- ===== タスク詳細モーダル ===== -->
+    <div id="taskModal"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:2000;">
+        <div style="background:#1a2733;padding:24px;border-radius:16px;max-width:500px;width:90%;position:relative;border:1px solid rgba(0,255,255,.3);">
+            <button onclick="document.getElementById('taskModal').style.display='none'"
+                    style="position:absolute;right:12px;top:12px;border:0;background:transparent;font-size:18px;color:#fff;cursor:pointer;">
+                ✕
+            </button>
 
-    <script>
-        function showSection(id) {
-            document.querySelectorAll(".content-section").forEach((section) => {
-                section.classList.remove("active");
+            <h3 id="modal-title" style="margin-bottom:12px;color:#6ff;"></h3>
+            <p id="modal-date" style="font-size:14px;margin-bottom:10px;"></p>
+            <p id="modal-category" style="font-size:14px;margin-bottom:6px;"></p>
+            <p id="modal-description" style="font-size:14px;line-height:1.6;"></p>
+            <div style="margin-top:16px;text-align:right;">
+            <button id="modal-delete-btn" style="background:#e74c3c;color:#fff;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;">
+                削除
+            </button>
+</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showSection(id) {
+        document.querySelectorAll(".content-section").forEach((section) => {
+            section.classList.remove("active");
+        });
+        document.getElementById(id).classList.add("active");
+
+        // 月次レポートセクションが表示された時にデータを読み込む
+        if (id === "report") {
+            // report.jsの関数を呼び出す
+            if (typeof switchTab === 'function') {
+                switchTab('project');
+            }
+            const now = new Date();
+            if (typeof loadMonthly === 'function') {
+                loadMonthly(now.getFullYear(), now.getMonth() + 1);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        document.getElementById("modal-delete-btn").addEventListener("click", async function () {
+            const id = this.dataset.id;
+            if (!id) return;
+            if (!confirm("このタスクを削除しますか？")) return;
+            const r = await fetch(`/api/tasks/${id}`, {
+            method: "DELETE"
             });
-            document.getElementById(id).classList.add("active");
+            if (r.ok) {
+                document.getElementById("taskModal").style.display = "none";
+                calendar.refetchEvents();
+            } else {
+                alert("削除に失敗しました");
+            }
+        });
 
-            // 月次レポートセクションが表示された時にデータを読み込む
-            if (id === "report") {
-                // report.jsの関数を呼び出す
-                if (typeof switchTab === 'function') {
-                    switchTab('project');
-                }
-                const now = new Date();
-                if (typeof loadMonthly === 'function') {
-                    loadMonthly(now.getFullYear(), now.getMonth() + 1);
-                }
+        const calendarEl = document.getElementById('calendar');
+        let selectedDate = new Date().toISOString().slice(0, 10);
+        // categories をキャッシュしてイベント生成で色などに使う
+        let categoriesCache = [];
+
+        function isoDatePlusDays(dateStr, days) {
+            const d = new Date(dateStr + 'T00:00:00');
+            d.setDate(d.getDate() + days);
+            return d.toISOString().slice(0, 10);
+        }
+
+        function formatDateJP(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+        }
+
+        async function fetchCategories() {
+            try {
+                const r = await fetch('/api/categories');
+                console.log('GET /api/categories', r.status);
+                if (!r.ok) return [];
+                const j = await r.json();
+                console.log('categories', j);
+                return j;
+            } catch (e) {
+                console.error('fetchCategories error', e);
+                return []
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async function () {
-            const calendarEl = document.getElementById('calendar');
-            let selectedDate = new Date().toISOString().slice(0, 10);
-            // categories をキャッシュしてイベント生成で色などに使う
-            let categoriesCache = [];
+        async function populateCategories() {
+            const cats = await fetchCategories();
+            categoriesCache = cats || [];
+            const sel = document.getElementById('category-select');
+            sel.innerHTML = '<option value="">(カテゴリなし)</option>' + cats.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('');
+        }
 
-            function isoDatePlusDays(dateStr, days) {
-                const d = new Date(dateStr + 'T00:00:00');
-                d.setDate(d.getDate() + days);
-                return d.toISOString().slice(0, 10);
+        function isDateOnly(s) {
+            if (!s) return false;
+            // ISO date-only は YYYY-MM-DD （T がなければ時刻なし）
+            return s.indexOf('T') === -1;
+        }
+
+        async function renderDayTasks(dateStr) {
+            selectedDate = dateStr;
+            document.getElementById('day-panel-title').textContent = formatDateJP(dateStr) + ' のタスク';
+            const start = dateStr;
+            const end = isoDatePlusDays(dateStr, 1);
+            // FullCalendar/server 側が期待する start/end を query に乗せる
+            const r = await fetch(`/api/tasks?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+            console.log('GET /api/tasks for day list', r.status, {start, end});
+            if (!r.ok) {
+                document.getElementById('day-task-list').innerHTML = '<li>読み込み失敗</li>';
+                return;
             }
-
-            function formatDateJP(dateStr) {
-                const d = new Date(dateStr + 'T00:00:00');
-                return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
-            }
-
-            async function fetchCategories() {
-                try {
-                    const r = await fetch('/api/categories');
-                    console.log('GET /api/categories', r.status);
-                    if (!r.ok) return [];
-                    const j = await r.json();
-                    console.log('categories', j);
-                    return j;
-                } catch (e) {
-                    console.error('fetchCategories error', e);
-                    return []
-                }
-            }
-
-            async function populateCategories() {
-                const cats = await fetchCategories();
-                categoriesCache = cats || [];
-                const sel = document.getElementById('category-select');
-                sel.innerHTML = '<option value="">(カテゴリなし)</option>' + cats.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('');
-            }
-
-            function isDateOnly(s) {
-                if (!s) return false;
-                // ISO date-only は YYYY-MM-DD （T がなければ時刻なし）
-                return s.indexOf('T') === -1;
-            }
-
-            async function renderDayTasks(dateStr) {
-                selectedDate = dateStr;
-                document.getElementById('day-panel-title').textContent = formatDateJP(dateStr) + ' のタスク';
-                const start = dateStr;
-                const end = isoDatePlusDays(dateStr, 1);
-                // FullCalendar/server 側が期待する start/end を query に乗せる
-                const r = await fetch(`/api/tasks?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-                console.log('GET /api/tasks for day list', r.status, {start, end});
-                if (!r.ok) {
-                    document.getElementById('day-task-list').innerHTML = '<li>読み込み失敗</li>';
-                    return;
-                }
-                const tasks = await r.json();
-                const container = document.getElementById('day-task-list');
-                // API のフィールド名に合わせて安全に取り出す
-                container.innerHTML = (tasks && tasks.length ? tasks : []).map(t => {
-                    const title = t.task_name || t.title || '(無題)';
-                    const start_time = (t.start_time || t.start) ? (new Date(t.start_time || t.start)).toLocaleString() : '';
-                    const memo = (t.extendedProps && t.extendedProps.memo) ? t.extendedProps.memo : (t.memo || '');
-                    // カテゴリ情報を取得
-                    const cat = categoriesCache.find(c => String(c.id) === String(t.category_id || (t.category && t.category.id)));
-                    const catName = cat ? cat.category_name : (t.category && t.category.category_name ? t.category.category_name : '');
-                    const catColor = cat ? cat.color : (t.category && t.category.color ? t.category.color : '');
-                    return `<div style="padding:12px;border:1px solid #eee;border-radius:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;">
-              <div>
-                <div style=\"font-weight:600;\">${title} ${catName ? '<span style=\\"font-size:12px;color:#666;margin-left:8px;\\"><small>['+catName+']</small></span>' : ''}</div>
-                <div style=\"font-size:12px;color:#666;\">${start_time}</div>
-                <div style=\"font-size:13px;color:#333;\">${memo}</div>
-              </div>
-              <div style=\"display:flex;gap:8px;align-items:center;\">
-                <a href=\"/tasks/create?clone_id=${t.id}\" style=\"padding:6px 8px;border-radius:6px;border:1px solid #ddd;text-decoration:none;color:#333;\">複製</a>
-                <button data-id=\"${t.id}\" class=\"delete-task-btn\" style=\"padding:6px 8px;border-radius:6px;border:1px solid #e74c3c;background:#fff;color:#e74c3c;cursor:pointer;\">削除</button>
-              </div>
-            </div>`;
-                }).join('') || '';
-                // attach delete handlers
-                container.querySelectorAll('.delete-task-btn').forEach(b => {
-                    b.addEventListener('click', async function () {
-                        const id = this.dataset.id;
-                        if (!confirm('このタスクを削除しますか？')) return;
-                        const r = await fetch(`/api/tasks/${id}`, {method: 'DELETE'});
-                        if (r.ok) {
-                            renderDayTasks(dateStr);
-                            calendar.refetchEvents();
-                        } else {
-                            alert('削除失敗');
-                        }
-                    });
-                });
-            }
-
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                headerToolbar: {left: 'prev,next today', center: 'task_name', right: 'timeGridWeek,dayGridMonth'},
-                selectable: true,
-                editable: true,
-                // FullCalendar の events 関数を使い、サーバーから start/end を query で取得
-                events: function (fetchInfo, successCallback, failureCallback) {
-                    const qs = `?start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}`;
-                    fetch(`/api/tasks${qs}`)
-                        .then(r => {
-                            if (!r.ok) throw new Error('fetch failed');
-                            return r.json();
-                        })
-                        .then(data => {
-                            // API のフィールド名を FullCalendar に合わせてマップ
-                            const events = (data && data.length ? data : []).map(t => {
-                                const startRaw = t.start_time || t.start || null;
-                                const endRaw = t.end_time || t.end || null;
-                                const cat = categoriesCache.find(c => String(c.id) === String(t.category_id || (t.category && t.category.id)));
-                                const color = cat ? cat.color : (t.category && t.category.color ? t.category.color : null);
-                                const allDay = isDateOnly(startRaw) && (!endRaw || isDateOnly(endRaw));
-                                return {
-                                    id: t.id,
-                                    title: t.task_name || t.title || '(無題)',
-                                    start: startRaw,
-                                    end: endRaw,
-                                    allDay: !!allDay,
-                                    backgroundColor: color || undefined,
-                                    extendedProps: Object.assign({}, t.extendedProps || {memo: t.memo || ''}, {
-                                        memo: (t.extendedProps && t.extendedProps.memo) ? t.extendedProps.memo : (t.memo || ''),
-                                        category_id: t.category_id || (t.category && t.category.id) || null,
-                                        category_name: cat ? cat.category_name : (t.category && t.category.category_name) || null,
-                                        color: color || null
-                                    })
-                                };
-                            });
-                            successCallback(events);
-                        })
-                        .catch(err => failureCallback(err));
-                },
-                dateClick: function (info) {
-                    // 日付クリックで下部リストを更新
-                    renderDayTasks(info.dateStr);
-                },
-                eventDrop: function (info) {
-                    fetch(`/api/tasks/${info.event.id}`, {
-                        method: 'PUT',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            start: info.event.start ? info.event.start.toISOString() : null,
-                            end: info.event.end ? info.event.end.toISOString() : null
-                        })
-                    }).then(() => {
+            const tasks = await r.json();
+            const container = document.getElementById('day-task-list');
+            // API のフィールド名に合わせて安全に取り出す
+            container.innerHTML = (tasks && tasks.length ? tasks : []).map(t => {
+                const title = t.task_name || t.title || '(無題)';
+                const start_time = (t.start_time || t.start) ? (new Date(t.start_time || t.start)).toLocaleString() : '';
+                const memo = (t.extendedProps && t.extendedProps.memo) ? t.extendedProps.memo : (t.memo || '');
+                // カテゴリ情報を取得
+                const cat = categoriesCache.find(c => String(c.id) === String(t.category_id || (t.category && t.category.id)));
+                const catName = cat ? cat.category_name : (t.category && t.category.category_name ? t.category.category_name : '');
+                const catColor = cat ? cat.color : (t.category && t.category.color ? t.category.color : '');
+                return `<div style="padding:12px;border:1px solid #eee;border-radius:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style=\"font-weight:600;\">${title} ${catName ? '<span style=\\"font-size:12px;color:#666;margin-left:8px;\\"><small>['+catName+']</small></span>' : ''}</div>
+            <div style=\"font-size:12px;color:#666;\">${start_time}</div>
+            <div style=\"font-size:13px;color:#333;\">${memo}</div>
+          </div>
+          <div style=\"display:flex;gap:8px;align-items:center;\">
+            <a href=\"/tasks/create?clone_id=${t.id}\" style=\"padding:6px 8px;border-radius:6px;border:1px solid #ddd;text-decoration:none;color:#333;\">複製</a>
+            <button data-id=\"${t.id}\" class=\"delete-task-btn\" style=\"padding:6px 8px;border-radius:6px;border:1px solid #e74c3c;background:#fff;color:#e74c3c;cursor:pointer;\">削除</button>
+          </div>
+        </div>`;
+            }).join('') || '';
+            // attach delete handlers
+            container.querySelectorAll('.delete-task-btn').forEach(b => {
+                b.addEventListener('click', async function () {
+                    const id = this.dataset.id;
+                    if (!confirm('このタスクを削除しますか？')) return;
+                    const r = await fetch(`/api/tasks/${id}`, {method: 'DELETE'});
+                    if (r.ok) {
+                        renderDayTasks(dateStr);
                         calendar.refetchEvents();
-                        renderDayTasks(selectedDate);
-                    });
-                },
-                eventClick: function (info) {
-                    if (confirm('このタスクを削除しますか？')) {
-                        fetch(`/api/tasks/${info.event.id}`, {method: 'DELETE'})
-                            .then(() => {
-                                calendar.refetchEvents();
-                                renderDayTasks(selectedDate);
-                            });
+                    } else {
+                        alert('削除失敗');
                     }
-                },
-                datesSet: function (info) {
-                    // 初期表示時に選択日を今日にしてリストを表示
-                    // 当月表示切替などのタイミングで呼ばれる
-                    const todayStr = new Date().toISOString().slice(0, 10);
-                    renderDayTasks(todayStr);
-                }
+                });
             });
-            calendar.render();
+        }
 
-            // initCategories は既に await initCategories() で呼ばれているが、念のため
-            // カレンダー生成前に categoriesCache がセットされていることを期待する
-            //（index.html の実行フロー上は OK）
-
-            // 新規登録フォーム処理（modal に対応）
-            const openModalBtn = document.getElementById('open-new-task-modal');
-            const modal = document.getElementById('new-task-modal');
-            const closeModal = document.getElementById('close-new-task-modal');
-            const cancelBtn = document.getElementById('cancel-new-task');
-            const form = document.getElementById('new-task-form');
-            const startInput = document.getElementById('start_time');
-            const endInput = document.getElementById('end_time');
-            const nameInput = document.getElementById('task-name');
-            const memoInput = document.getElementById('memo');
-
-            function openModal() {
-                modal.style.display = 'flex';
-                // reset form
-                form.reset();
-                setDefaultDateInputs(selectedDate);
-            }
-
-            function hideModal() {
-                modal.style.display = 'none';
-            }
-
-            openModalBtn.addEventListener('click', () => {
-                openModal();
-            });
-            closeModal.addEventListener('click', () => {
-                hideModal();
-            });
-            cancelBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                hideModal();
-            });
-
-            // set sensible defaults for start/end based on selectedDate
-            function setDefaultDateInputs(dateStr) {
-                startInput.value = dateStr + 'T09:00';
-                endInput.value = dateStr + 'T10:00';
-            }
-
-            setDefaultDateInputs(selectedDate);
-
-            // render horizontal category buttons into the modal list
-            function renderCategoryButtons(cats) {
-                const container = document.getElementById('modal-category-list');
-                container.innerHTML = '';
-                if (cats && cats.length > 0) {
-                    cats.forEach(c => {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.textContent = c.category_name;
-                        btn.style.padding = '6px 10px';
-                        btn.style.border = '1px solid #ddd';
-                        btn.style.borderRadius = '16px';
-                        btn.style.background = c.color || '#fff';
-                        btn.style.cursor = 'pointer';
-                        btn.dataset.catId = c.id;
-                        btn.addEventListener('click', function () {
-                            document.getElementById('category-select').value = this.dataset.catId;
-                            container.querySelectorAll('button').forEach(b => b.style.outline = '');
-                            this.style.outline = '2px solid #4a90e2';
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            headerToolbar: {left: 'prev,next today', center: 'task_name', right: 'timeGridWeek,dayGridMonth'},
+            selectable: true,
+            editable: true,
+            // FullCalendar の events 関数を使い、サーバーから start/end を query で取得
+            events: function (fetchInfo, successCallback, failureCallback) {
+                const qs = `?start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}`;
+                fetch(`/api/tasks${qs}`)
+                    .then(r => {
+                        if (!r.ok) throw new Error('fetch failed');
+                        return r.json();
+                    })
+                    .then(data => {
+                        // API のフィールド名を FullCalendar に合わせてマップ
+                        const events = (data && data.length ? data : []).map(t => {
+                            const startRaw = t.start_time || t.start || null;
+                            const endRaw = t.end_time || t.end || null;
+                            const cat = categoriesCache.find(c => String(c.id) === String(t.category_id || (t.category && t.category.id)));
+                            const color = cat ? cat.color : (t.category && t.category.color ? t.category.color : null);
+                            const allDay = isDateOnly(startRaw) && (!endRaw || isDateOnly(endRaw));
+                            return {
+                                id: t.id,
+                                title: t.task_name || t.title || '(無題)',
+                                start: startRaw,
+                                end: endRaw,
+                                allDay: !!allDay,
+                                backgroundColor: color || undefined,
+                                extendedProps: Object.assign({}, t.extendedProps || {memo: t.memo || ''}, {
+                                    memo: (t.extendedProps && t.extendedProps.memo) ? t.extendedProps.memo : (t.memo || ''),
+                                    category_id: t.category_id || (t.category && t.category.id) || null,
+                                    category_name: cat ? cat.category_name : (t.category && t.category.category_name) || null,
+                                    color: color || null
+                                })
+                            };
                         });
-                        container.appendChild(btn);
-                    });
-                }
-                const addBtn = document.createElement('button');
-                addBtn.type = 'button';
-                addBtn.textContent = '＋ 新規カテゴリ';
-                addBtn.style.padding = '6px 10px';
-                addBtn.style.border = '1px dashed #aaa';
-                addBtn.style.borderRadius = '16px';
-                addBtn.style.background = '#fff';
-                addBtn.style.cursor = 'pointer';
-                addBtn.style.color = '#222';
-                addBtn.addEventListener('click', function () {
-                    const name = prompt('新しいカテゴリ名を入力');
-                    if (!name) return;
-                    const color = prompt('色（例: #ff0000）を入力（空欄でデフォルト）');
-                    fetch('/api/categories', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({category_name: name, color: color})
-                    }).then(async r => {
-                        if (r.ok) {
-                            const j = await r.json();
-                            const cats = await fetchCategories();
-                            renderCategoryButtons(cats);
-                            document.getElementById('category-select').value = j.id;
-                        } else {
-                            alert('カテゴリ作成に失敗しました');
-                        }
-                    }).catch(e => {
-                        console.error('create category error', e);
-                        alert('カテゴリ作成に失敗しました');
-                    });
-                });
-                container.appendChild(addBtn);
-            }
-
-            // populate hidden select used by the form
-            function populateHiddenSelect(cats) {
-                const sel = document.getElementById('category-select');
-                sel.innerHTML = '<option value="">(カテゴリなし)</option>' + (cats && cats.length ? cats.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('') : '');
-            }
-
-            // populate select and buttons
-            async function initCategories() {
-                const cats = await fetchCategories();
-                categoriesCache = cats || [];
-                populateHiddenSelect(cats);
-                renderCategoryButtons(cats);
-             }
-
-             await initCategories();
-
-            form.addEventListener('submit', async function (e) {
-                e.preventDefault();
-                const payload = {
-                    task_name: nameInput.value,
-                    category_id: document.getElementById('category-select').value || null,
-                    memo: memoInput.value || null,
-                    start_time: startInput.value || (selectedDate + 'T09:00'),
-                    end_time: endInput.value || (selectedDate + 'T10:00')
-                };
-                const r = await fetch('/api/tasks', {
-                    method: 'POST',
+                        successCallback(events);
+                    })
+                    .catch(err => failureCallback(err));
+            },
+            dateClick: function (info) {
+                // 日付クリックで下部リストを更新
+                renderDayTasks(info.dateStr);
+            },
+            eventDrop: function (info) {
+                fetch(`/api/tasks/${info.event.id}`, {
+                    method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-                if (r.ok) {
-                    hideModal();
-                    nameInput.value = '';
-                    memoInput.value = '';
+                    body: JSON.stringify({
+                        start: info.event.start ? info.event.start.toISOString() : null,
+                        end: info.event.end ? info.event.end.toISOString() : null
+                    })
+                }).then(() => {
                     calendar.refetchEvents();
                     renderDayTasks(selectedDate);
-                } else {
-                    alert('作成に失敗しました');
-                }
-            });
+                });
+            },
+            eventClick: function (info) {
+                const event = info.event;
 
-            // close modal handler
-            document.getElementById('close-new-task-modal').addEventListener('click', function () {
-                document.getElementById('new-task-modal').style.display = 'none';
-            });
+                const title = event.title;
+                const description = event.extendedProps.memo || '';
+                const category = event.extendedProps.category_name || 'カテゴリなし';
+                const date = event.start.toLocaleString();
 
-            // cancel button in modal
-            document.getElementById('cancel-new-task').addEventListener('click', function () {
-                document.getElementById('new-task-modal').style.display = 'none';
-            });
+                document.getElementById("modal-title").textContent = title;
+                const catEl = document.getElementById("modal-category");
+                catEl.textContent = "カテゴリ: " + category;
+                document.getElementById("modal-date").textContent = date;
+                document.getElementById("modal-description").textContent = description;
+
+                document.getElementById("modal-delete-btn").dataset.id = event.id;
+
+                document.getElementById("taskModal").style.display = "flex";
+            },
+            datesSet: function (info) {
+                // 初期表示時に選択日を今日にしてリストを表示
+                // 当月表示切替などのタイミングで呼ばれる
+                const todayStr = new Date().toISOString().slice(0, 10);
+                renderDayTasks(todayStr);
+            }
         });
-    </script>
+        calendar.render();
+
+        // initCategories は既に await initCategories() で呼ばれているが、念のため
+        // カレンダー生成前に categoriesCache がセットされていることを期待する
+        //（index.html の実行フロー上は OK）
+
+        // 新規登録フォーム処理（modal に対応）
+        const openModalBtn = document.getElementById('open-new-task-modal');
+        const modal = document.getElementById('new-task-modal');
+        const closeModal = document.getElementById('close-new-task-modal');
+        const cancelBtn = document.getElementById('cancel-new-task');
+        const form = document.getElementById('new-task-form');
+        const startInput = document.getElementById('start_time');
+        const endInput = document.getElementById('end_time');
+        const nameInput = document.getElementById('task-name');
+        const memoInput = document.getElementById('memo');
+
+        function openModal() {
+            modal.style.display = 'flex';
+            // reset form
+            form.reset();
+            setDefaultDateInputs(selectedDate);
+        }
+
+        function hideModal() {
+            modal.style.display = 'none';
+        }
+
+        openModalBtn.addEventListener('click', () => {
+            openModal();
+        });
+        closeModal.addEventListener('click', () => {
+            hideModal();
+        });
+        cancelBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            hideModal();
+        });
+
+        // set sensible defaults for start/end based on selectedDate
+        function setDefaultDateInputs(dateStr) {
+            startInput.value = dateStr + 'T09:00';
+            endInput.value = dateStr + 'T10:00';
+        }
+
+        setDefaultDateInputs(selectedDate);
+
+        // render horizontal category buttons into the modal list
+        function renderCategoryButtons(cats) {
+            const container = document.getElementById('modal-category-list');
+            container.innerHTML = '';
+            if (cats && cats.length > 0) {
+                cats.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = c.category_name;
+                    btn.style.padding = '6px 10px';
+                    btn.style.border = '1px solid #ddd';
+                    btn.style.borderRadius = '16px';
+                    btn.style.background = c.color || '#fff';
+                    btn.style.cursor = 'pointer';
+                    btn.dataset.catId = c.id;
+                    btn.addEventListener('click', function () {
+                        document.getElementById('category-select').value = this.dataset.catId;
+                        container.querySelectorAll('button').forEach(b => b.style.outline = '');
+                        this.style.outline = '2px solid #4a90e2';
+                    });
+                    container.appendChild(btn);
+                });
+            }
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.textContent = '＋ 新規カテゴリ';
+            addBtn.style.padding = '6px 10px';
+            addBtn.style.border = '1px dashed #aaa';
+            addBtn.style.borderRadius = '16px';
+            addBtn.style.background = '#fff';
+            addBtn.style.cursor = 'pointer';
+            addBtn.style.color = '#222';
+            addBtn.addEventListener('click', function () {
+                const name = prompt('新しいカテゴリ名を入力');
+                if (!name) return;
+                const color = prompt('色（例: #ff0000）を入力（空欄でデフォルト）');
+                fetch('/api/categories', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({category_name: name, color: color})
+                }).then(async r => {
+                    if (r.ok) {
+                        const j = await r.json();
+                        const cats = await fetchCategories();
+                        renderCategoryButtons(cats);
+                        document.getElementById('category-select').value = j.id;
+                    } else {
+                        alert('カテゴリ作成に失敗しました');
+                    }
+                }).catch(e => {
+                    console.error('create category error', e);
+                    alert('カテゴリ作成に失敗しました');
+                });
+            });
+            container.appendChild(addBtn);
+        }
+
+        // populate hidden select used by the form
+        function populateHiddenSelect(cats) {
+            const sel = document.getElementById('category-select');
+            sel.innerHTML = '<option value="">(カテゴリなし)</option>' + (cats && cats.length ? cats.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('') : '');
+        }
+
+        // populate select and buttons
+        async function initCategories() {
+            const cats = await fetchCategories();
+            categoriesCache = cats || [];
+            populateHiddenSelect(cats);
+            renderCategoryButtons(cats);
+         }
+
+         await initCategories();
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const payload = {
+                task_name: nameInput.value,
+                category_id: document.getElementById('category-select').value || null,
+                memo: memoInput.value || null,
+                start_time: startInput.value || (selectedDate + 'T09:00'),
+                end_time: endInput.value || (selectedDate + 'T10:00')
+            };
+            const r = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (r.ok) {
+                hideModal();
+                nameInput.value = '';
+                memoInput.value = '';
+                calendar.refetchEvents();
+                renderDayTasks(selectedDate);
+            } else {
+                alert('作成に失敗しました');
+            }
+        });
+
+        // close modal handler
+        document.getElementById('close-new-task-modal').addEventListener('click', function () {
+            document.getElementById('new-task-modal').style.display = 'none';
+        });
+
+        // cancel button in modal
+        document.getElementById('cancel-new-task').addEventListener('click', function () {
+            document.getElementById('new-task-modal').style.display = 'none';
+        });
+    });
+</script>
 </body>
 </html>
