@@ -140,16 +140,22 @@ def monthly():
     # GETパラメータから取得
     year, month = _parse_year_month()
 
-    # 1. フィルタリング用の基準（started_date の date カラムを基準にする）
-    filter_target = Task.started_date
+    # 1. フィルタリング用の基準（start_time の日付部分を基準とする）
+    date_column = func.date(Task.start_time)
 
-    # 総作業時間（秒）を算出（ended_date があるもののみ）
-    total_duration_q = (
-        db.session.query(func.sum(Task.duration_seconds).label('total_duration')).select_from(Task).filter(Task.ended_date.isnot(None))
+    # duration を started_time/ended_time の差（秒）で計算（両方あるもののみを対象）
+    duration_expr = case(
+        ( (Task.started_time.isnot(None)) & (Task.ended_time.isnot(None)), func.extract('epoch', (Task.ended_time - Task.started_time)) ),
+        else_=None
     )
-    total_duration_q = _apply_year_month_filter(total_duration_q, filter_target, year, month)
+
+    # 総作業時間（秒）を算出（started_time/ended_time が両方あるレコードのみ）
+    total_duration_q = (
+        db.session.query(func.sum(duration_expr).label('total_duration')).select_from(Task).filter(Task.started_time.isnot(None), Task.ended_time.isnot(None))
+    )
+    total_duration_q = _apply_year_month_filter(total_duration_q, date_column, year, month)
     total_duration_row = total_duration_q.first()
-    total_seconds = total_duration_row.total_duration if total_duration_row and total_duration_row.total_duration else 0
+    total_seconds = total_duration_row.total_duration if total_duration_row and total_duration_row.total_duration is not None else None
 
     # 3. 総作業日数: タスクの開始日〜終了日を日単位で展開し、対象月内のユニークな日数をカウントする
     # 使用する DB 関数は Postgres の generate_series(date, date, interval '1 day')
@@ -181,6 +187,6 @@ def monthly():
     total_day = int(res.total_day) if res and res.total_day is not None else 0
 
     return jsonify({
-        "total_hour": round(total_seconds / 3600, 1) if total_seconds else 0,
+        "total_hour": float(round(total_seconds / 3600, 1)) if total_seconds is not None else None,
         "total_day": int(total_day)
     })
