@@ -56,11 +56,11 @@ def project():
     # 各プロジェクト（task_name）ごとの合計時間も取得して、行ごとの進捗をプロジェクト内比率で計算する
     # 実働（actual）での合計（これを表示の total_hour に使う）
     task_total_q = (
-        db.session.query(Task.task_name, func.sum(duration_expr).label('task_total')).select_from(Task).filter(Task.ended_date.isnot(None))
+        db.session.query(Task.task_name,Task.id, func.sum(duration_expr).label('task_total')).select_from(Task).filter(Task.ended_date.isnot(None))
     )
     task_total_q = _apply_year_month_filter(task_total_q, schedule_date, year, month)
-    task_total_q = task_total_q.group_by(Task.task_name)
-    task_totals = {row.task_name: (row.task_total or 0) for row in task_total_q.all()}
+    task_total_q = task_total_q.group_by(Task.id)
+    task_totals = {row.id: (row.task_total or 0) for row in task_total_q.all()}
 
     # 予定時間（planned）: start_time と end_time の差を秒で算出し、プロジェクトごとの予定合計を取得
     planned_expr = case(
@@ -68,16 +68,17 @@ def project():
         else_=None
     )
     planned_q = (
-        db.session.query(Task.task_name, func.sum(planned_expr).label('planned_total')).select_from(Task)
+        db.session.query(Task.task_name,Task.id, func.sum(planned_expr).label('planned_total')).select_from(Task)
     )
     planned_q = _apply_year_month_filter(planned_q, schedule_date, year, month)
-    planned_q = planned_q.group_by(Task.task_name)
-    planned_totals = {row.task_name: (row.planned_total or 0) for row in planned_q.all()}
+    planned_q = planned_q.group_by(Task.id)
+    planned_totals = {row.id: (row.planned_total or 0) for row in planned_q.all()}
 
     # タスク名、予定日、終了日ごとに集計（秒）
     todo_query = (
         db.session.query(
             Task.task_name,
+            Task.id,
             schedule_date.label('work_date'),
             Task.ended_date,
             func.sum(duration_expr).label('total_duration')
@@ -86,7 +87,7 @@ def project():
     todo_query = _apply_year_month_filter(todo_query, schedule_date, year, month)
     todo_list = (
         todo_query
-        .group_by(Task.task_name, schedule_date, Task.ended_date)
+        .group_by(Task.id, schedule_date, Task.ended_date)
         .order_by(func.sum(duration_expr).desc())
         .all()
     )
@@ -101,8 +102,8 @@ def project():
                 # 表示しないため null を返す
                 "total_hour": float(round(todo.total_duration / 3600, 1)) if todo.total_duration is not None else None,
                 "progress": (
-                    float(round((todo.total_duration / planned_totals.get(todo.task_name)) * 100, 1))
-                    if (todo.total_duration is not None and planned_totals.get(todo.task_name)) else None
+                    float(round((todo.total_duration / planned_totals.get(todo.id)) * 100, 1))
+                    if (todo.total_duration is not None and planned_totals.get(todo.id)) else None
                 )
             }
             for todo in todo_list
